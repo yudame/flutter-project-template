@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:hive/hive.dart';
@@ -40,12 +41,13 @@ class OfflineQueue {
         '${type.name}_${params.hashCode}_${DateTime.now().millisecondsSinceEpoch}';
     params['idempotency_key'] = idempotencyKey;
 
-    final box = await _hive.openBox<QueuedRequest>(_boxName);
+    final box = await _hive.openBox<String>(_boxName);
 
     // Check for existing request with same idempotency key
-    final existing = box.values.any(
-      (r) => r.type == type && r.params['idempotency_key'] == idempotencyKey,
-    );
+    final existing = box.values.any((jsonStr) {
+      final r = QueuedRequest.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
+      return r.type == type && r.params['idempotency_key'] == idempotencyKey;
+    });
 
     if (existing) {
       _logger.i('Duplicate request ignored: $idempotencyKey');
@@ -65,13 +67,15 @@ class OfflineQueue {
       queuedAt: DateTime.now(),
     );
 
-    await box.put(request.id, request);
+    await box.put(request.id, jsonEncode(request.toJson()));
     _logger.i('Queued ${type.name} request: ${request.id}');
   }
 
   Future<void> processQueue() async {
-    final box = await _hive.openBox<QueuedRequest>(_boxName);
-    final requests = box.values.toList()
+    final box = await _hive.openBox<String>(_boxName);
+    final requests = box.values
+        .map((jsonStr) => QueuedRequest.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>))
+        .toList()
       ..sort((a, b) => a.queuedAt.compareTo(b.queuedAt));
 
     _logger.i('Processing ${requests.length} queued requests');
@@ -115,7 +119,7 @@ class OfflineQueue {
 
   Future<void> _handleFailedRequest(
     QueuedRequest request,
-    Box<QueuedRequest> box,
+    Box<String> box,
     dynamic error,
     StackTrace stack,
   ) async {
@@ -131,7 +135,7 @@ class OfflineQueue {
       final updated = request.copyWith(
         retryCount: request.retryCount + 1,
       );
-      await box.put(request.id, updated);
+      await box.put(request.id, jsonEncode(updated.toJson()));
       _logger.w(
         'Request ${request.id} failed, retry count: ${updated.retryCount}',
       );
@@ -139,12 +143,12 @@ class OfflineQueue {
   }
 
   Future<int> get queueLength async {
-    final box = await _hive.openBox<QueuedRequest>(_boxName);
+    final box = await _hive.openBox<String>(_boxName);
     return box.length;
   }
 
   Future<void> clearQueue() async {
-    final box = await _hive.openBox<QueuedRequest>(_boxName);
+    final box = await _hive.openBox<String>(_boxName);
     await box.clear();
     _logger.i('Queue cleared');
   }

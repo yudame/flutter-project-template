@@ -4,7 +4,7 @@ part 'result.freezed.dart';
 
 /// A Result type for handling success/failure states in a type-safe way.
 @freezed
-class Result<T> with _$Result<T> {
+abstract class Result<T> with _$Result<T> {
   const factory Result.success(T data) = Success<T>;
   const factory Result.failure(String message, [Object? error]) = Failure<T>;
   const factory Result.loading() = Loading<T>;

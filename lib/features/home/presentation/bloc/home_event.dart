@@ -1,7 +1,7 @@
 part of 'home_bloc.dart';
 
 @freezed
-class HomeEvent with _$HomeEvent {
+abstract class HomeEvent with _$HomeEvent {
   const factory HomeEvent.load() = _Load;
   const factory HomeEvent.refresh() = _Refresh;
   const factory HomeEvent.createItem({

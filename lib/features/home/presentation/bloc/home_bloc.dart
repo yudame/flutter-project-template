@@ -4,6 +4,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../../../core/connectivity/connectivity_bloc.dart';
 import '../../../../core/connectivity/connectivity_state.dart';
 import '../../../../core/utils/connectivity_aware_mixin.dart';
+import '../../../../core/utils/result.dart';
 import '../../data/models/item.dart';
 import '../../data/repositories/item_repository.dart';
 

@@ -13,7 +13,12 @@ class MockItemRepository extends Mock implements ItemRepository {}
 class MockConnectivityBloc extends MockBloc<ConnectivityEvent, ConnectivityState>
     implements ConnectivityBloc {}
 
+class FakeItem extends Fake implements Item {}
+
 void main() {
+  setUpAll(() {
+    registerFallbackValue(FakeItem());
+  });
   late HomeBloc bloc;
   late MockItemRepository repository;
   late MockConnectivityBloc connectivityBloc;
@@ -93,7 +98,7 @@ void main() {
 
     group('refresh', () {
       blocTest<HomeBloc, HomeState>(
-        'emits [loaded] when refresh succeeds',
+        'keeps loaded state when refresh succeeds with same data',
         build: () {
           when(() => repository.getItems())
               .thenAnswer((_) async => Result.success(mockItems));
@@ -101,9 +106,11 @@ void main() {
         },
         seed: () => HomeState.loaded(mockItems),
         act: (bloc) => bloc.add(const HomeEvent.refresh()),
-        expect: () => [
-          HomeState.loaded(mockItems),
-        ],
+        // BLoC doesn't emit if state is identical - this verifies no change occurs
+        expect: () => <HomeState>[],
+        verify: (_) {
+          verify(() => repository.getItems()).called(1);
+        },
       );
 
       blocTest<HomeBloc, HomeState>(
@@ -115,9 +122,11 @@ void main() {
         },
         seed: () => HomeState.loaded(mockItems),
         act: (bloc) => bloc.add(const HomeEvent.refresh()),
-        expect: () => [
-          HomeState.loaded(mockItems),
-        ],
+        // BLoC doesn't emit if state is identical - items are retained
+        expect: () => <HomeState>[],
+        verify: (_) {
+          verify(() => repository.getItems()).called(1);
+        },
       );
     });
 

@@ -1,22 +1,17 @@
-import 'package:hive/hive.dart';
+/// Request type for offline queue operations.
+enum RequestType {
+  createItem,
+  updateItem,
+  deleteItem,
+  // Add your domain-specific request types here
+}
 
-part 'queued_request.g.dart';
-
-@HiveType(typeId: 0)
+/// Represents a queued request for offline execution.
 class QueuedRequest {
-  @HiveField(0)
   final String id;
-
-  @HiveField(1)
   final RequestType type;
-
-  @HiveField(2)
   final Map<String, dynamic> params;
-
-  @HiveField(3)
   final DateTime queuedAt;
-
-  @HiveField(4)
   final int retryCount;
 
   const QueuedRequest({
@@ -42,18 +37,24 @@ class QueuedRequest {
       retryCount: retryCount ?? this.retryCount,
     );
   }
-}
 
-@HiveType(typeId: 1)
-enum RequestType {
-  @HiveField(0)
-  createItem,
+  /// Convert to JSON for persistence.
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'type': type.name,
+        'params': params,
+        'queuedAt': queuedAt.toIso8601String(),
+        'retryCount': retryCount,
+      };
 
-  @HiveField(1)
-  updateItem,
-
-  @HiveField(2)
-  deleteItem,
-
-  // Add your domain-specific request types here
+  /// Create from JSON.
+  factory QueuedRequest.fromJson(Map<String, dynamic> json) {
+    return QueuedRequest(
+      id: json['id'] as String,
+      type: RequestType.values.byName(json['type'] as String),
+      params: Map<String, dynamic>.from(json['params'] as Map),
+      queuedAt: DateTime.parse(json['queuedAt'] as String),
+      retryCount: json['retryCount'] as int? ?? 0,
+    );
+  }
 }
