@@ -20,9 +20,10 @@ This template provides a production-ready Flutter architecture designed for:
 6. [Network Layer](#network-layer)
 7. [Connectivity Strategy](#connectivity-strategy)
 8. [Offline Queue](#offline-queue)
-9. [BLoC Patterns](#bloc-patterns)
-10. [Testing Strategy](#testing-strategy)
-11. [Code Generation](#code-generation)
+9. [Database Layer](#database-layer)
+10. [BLoC Patterns](#bloc-patterns)
+11. [Testing Strategy](#testing-strategy)
+12. [Code Generation](#code-generation)
 
 ---
 
@@ -71,13 +72,25 @@ dio_cache_interceptor: ^3.5.0 # HTTP caching
 dio_cache_interceptor_hive_store: ^3.2.2
 ```
 
-### Storage
+### Local Storage
 ```yaml
-hive: ^2.2.3                  # NoSQL database
+hive: ^2.2.3                  # Local NoSQL (offline cache, queue)
 hive_flutter: ^1.1.0
 flutter_secure_storage: ^9.2.2  # Encrypted storage (requires minSdk 23)
 shared_preferences: ^2.3.3    # Simple key-value
 path_provider: ^2.1.5         # File paths
+```
+
+### Remote Database (choose one)
+```yaml
+# Option A: Firebase (recommended for most apps)
+firebase_core: ^3.8.1
+firebase_auth: ^5.3.4
+cloud_firestore: ^5.6.0
+firebase_storage: ^12.4.0
+
+# Option B: Supabase (PostgreSQL-based alternative)
+supabase_flutter: ^2.8.3
 ```
 
 ### Dependency Injection
@@ -695,6 +708,540 @@ class OfflineQueue {
       await box.put(request.id, updated);
     }
   }
+}
+```
+
+---
+
+## Database Layer
+
+### Core Principle: User-Owned Documents
+
+Every app—whether it's photo processing, social media, or personal organization—reduces to a common pattern:
+
+```
+User → owns many → Documents (with optional media attachments)
+```
+
+The database layer is opinionated about this **pattern**, not the **provider**. Use Firebase, Supabase, or your own backend—the integration pattern stays the same.
+
+### What the Database Layer Handles
+
+| Concern | Solution |
+|---------|----------|
+| Authentication | Provider's auth (Firebase Auth, Supabase Auth) |
+| User documents | CRUD on user-owned collections |
+| Media storage | Provider's storage (Firebase Storage, Supabase Storage) |
+| Offline sync | Local Hive cache + sync on connectivity change |
+| Real-time (optional) | Provider's listeners when needed |
+
+### Project Structure
+
+```
+lib/core/
+├── database/
+│   ├── database_service.dart       # Abstract interface
+│   ├── firebase/                   # Firebase implementation
+│   │   ├── firebase_database_service.dart
+│   │   └── firebase_storage_service.dart
+│   └── models/
+│       └── sync_status.dart        # Sync state tracking
+```
+
+### Abstract Database Interface
+
+```dart
+/// Provider-agnostic database interface.
+/// Repositories depend on this, not concrete implementations.
+abstract class DatabaseService {
+  /// Authentication
+  Stream<String?> get authStateChanges;
+  Future<String?> get currentUserId;
+  Future<void> signOut();
+
+  /// User documents - the core pattern
+  Future<String> createDocument({
+    required String collection,
+    required Map<String, dynamic> data,
+  });
+
+  Future<void> updateDocument({
+    required String collection,
+    required String documentId,
+    required Map<String, dynamic> data,
+  });
+
+  Future<void> deleteDocument({
+    required String collection,
+    required String documentId,
+  });
+
+  Future<Map<String, dynamic>?> getDocument({
+    required String collection,
+    required String documentId,
+  });
+
+  Future<List<Map<String, dynamic>>> queryDocuments({
+    required String collection,
+    Map<String, dynamic>? whereEquals,
+    String? orderBy,
+    bool descending = false,
+    int? limit,
+  });
+
+  /// Real-time listeners (optional - use when needed)
+  Stream<List<Map<String, dynamic>>> watchCollection({
+    required String collection,
+    Map<String, dynamic>? whereEquals,
+    String? orderBy,
+    bool descending = false,
+  });
+}
+```
+
+### Firebase Implementation
+
+```dart
+class FirebaseDatabaseService implements DatabaseService {
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+
+  FirebaseDatabaseService({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _auth = auth ?? FirebaseAuth.instance;
+
+  @override
+  Stream<String?> get authStateChanges =>
+      _auth.authStateChanges().map((user) => user?.uid);
+
+  @override
+  Future<String?> get currentUserId async => _auth.currentUser?.uid;
+
+  @override
+  Future<String> createDocument({
+    required String collection,
+    required Map<String, dynamic> data,
+  }) async {
+    final userId = await currentUserId;
+    if (userId == null) throw AuthException('Not authenticated');
+
+    final docRef = await _firestore.collection(collection).add({
+      ...data,
+      'userId': userId,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    return docRef.id;
+  }
+
+  @override
+  Future<void> updateDocument({
+    required String collection,
+    required String documentId,
+    required Map<String, dynamic> data,
+  }) async {
+    await _firestore.collection(collection).doc(documentId).update({
+      ...data,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  @override
+  Future<void> deleteDocument({
+    required String collection,
+    required String documentId,
+  }) async {
+    await _firestore.collection(collection).doc(documentId).delete();
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getDocument({
+    required String collection,
+    required String documentId,
+  }) async {
+    final doc = await _firestore.collection(collection).doc(documentId).get();
+    if (!doc.exists) return null;
+    return {'id': doc.id, ...doc.data()!};
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> queryDocuments({
+    required String collection,
+    Map<String, dynamic>? whereEquals,
+    String? orderBy,
+    bool descending = false,
+    int? limit,
+  }) async {
+    final userId = await currentUserId;
+    if (userId == null) throw AuthException('Not authenticated');
+
+    Query query = _firestore
+        .collection(collection)
+        .where('userId', isEqualTo: userId);
+
+    if (whereEquals != null) {
+      for (final entry in whereEquals.entries) {
+        query = query.where(entry.key, isEqualTo: entry.value);
+      }
+    }
+
+    if (orderBy != null) {
+      query = query.orderBy(orderBy, descending: descending);
+    }
+
+    if (limit != null) {
+      query = query.limit(limit);
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs
+        .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
+        .toList();
+  }
+
+  @override
+  Stream<List<Map<String, dynamic>>> watchCollection({
+    required String collection,
+    Map<String, dynamic>? whereEquals,
+    String? orderBy,
+    bool descending = false,
+  }) {
+    // Implementation similar to queryDocuments but returns stream
+    // Use for real-time features like chat
+  }
+}
+```
+
+### Storage Service (Media/Files)
+
+```dart
+abstract class StorageService {
+  /// Upload file and return download URL
+  Future<String> uploadFile({
+    required String path,
+    required Uint8List data,
+    String? contentType,
+  });
+
+  /// Delete file
+  Future<void> deleteFile(String path);
+
+  /// Get download URL for existing file
+  Future<String> getDownloadUrl(String path);
+}
+
+class FirebaseStorageService implements StorageService {
+  final FirebaseStorage _storage;
+  final FirebaseAuth _auth;
+
+  FirebaseStorageService({
+    FirebaseStorage? storage,
+    FirebaseAuth? auth,
+  })  : _storage = storage ?? FirebaseStorage.instance,
+        _auth = auth ?? FirebaseAuth.instance;
+
+  @override
+  Future<String> uploadFile({
+    required String path,
+    required Uint8List data,
+    String? contentType,
+  }) async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) throw AuthException('Not authenticated');
+
+    // Prefix with userId for security rules
+    final fullPath = 'users/$userId/$path';
+    final ref = _storage.ref(fullPath);
+
+    final metadata = contentType != null
+        ? SettableMetadata(contentType: contentType)
+        : null;
+
+    await ref.putData(data, metadata);
+    return await ref.getDownloadURL();
+  }
+
+  @override
+  Future<void> deleteFile(String path) async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) throw AuthException('Not authenticated');
+
+    final fullPath = 'users/$userId/$path';
+    await _storage.ref(fullPath).delete();
+  }
+
+  @override
+  Future<String> getDownloadUrl(String path) async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) throw AuthException('Not authenticated');
+
+    final fullPath = 'users/$userId/$path';
+    return await _storage.ref(fullPath).getDownloadURL();
+  }
+}
+```
+
+### Repository Integration
+
+Repositories combine local cache (Hive) with remote database:
+
+```dart
+class NotesRepository {
+  final DatabaseService _db;
+  final StorageService _storage;
+  final HiveInterface _hive;
+  final ConnectivityService _connectivity;
+
+  static const _collection = 'notes';
+  static const _cacheBox = 'notes_cache';
+
+  Future<Result<Note>> createNote({
+    required String title,
+    required String content,
+    Uint8List? imageData,
+  }) async {
+    // Generate local ID for optimistic update
+    final localId = const Uuid().v4();
+    String? imageUrl;
+
+    // Upload image if provided
+    if (imageData != null) {
+      try {
+        imageUrl = await _storage.uploadFile(
+          path: 'notes/$localId/image.jpg',
+          data: imageData,
+          contentType: 'image/jpeg',
+        );
+      } catch (e) {
+        return Result.failure('Failed to upload image');
+      }
+    }
+
+    final noteData = {
+      'title': title,
+      'content': content,
+      'imageUrl': imageUrl,
+    };
+
+    return _connectivity.currentState.when(
+      online: () async {
+        try {
+          final docId = await _db.createDocument(
+            collection: _collection,
+            data: noteData,
+          );
+          final note = Note(id: docId, title: title, content: content, imageUrl: imageUrl);
+          await _cacheNote(note);
+          return Result.success(note);
+        } catch (e) {
+          return Result.failure('Failed to create note');
+        }
+      },
+      poor: () async {
+        // Try with short timeout, fall back to queue
+        try {
+          final docId = await _db.createDocument(
+            collection: _collection,
+            data: noteData,
+          ).timeout(const Duration(seconds: 5));
+          final note = Note(id: docId, title: title, content: content, imageUrl: imageUrl);
+          await _cacheNote(note);
+          return Result.success(note);
+        } catch (e) {
+          return _queueCreate(localId, noteData);
+        }
+      },
+      offline: () => _queueCreate(localId, noteData),
+    );
+  }
+
+  Future<Result<List<Note>>> getNotes() async {
+    return _connectivity.currentState.when(
+      online: () async {
+        try {
+          final docs = await _db.queryDocuments(
+            collection: _collection,
+            orderBy: 'createdAt',
+            descending: true,
+          );
+          final notes = docs.map((d) => Note.fromJson(d)).toList();
+          await _cacheNotes(notes);
+          return Result.success(notes);
+        } catch (e) {
+          return _getCachedNotes();
+        }
+      },
+      poor: () async {
+        try {
+          final docs = await _db.queryDocuments(
+            collection: _collection,
+            orderBy: 'createdAt',
+            descending: true,
+          ).timeout(const Duration(seconds: 5));
+          final notes = docs.map((d) => Note.fromJson(d)).toList();
+          await _cacheNotes(notes);
+          return Result.success(notes);
+        } catch (e) {
+          return _getCachedNotes();
+        }
+      },
+      offline: () => _getCachedNotes(),
+    );
+  }
+
+  Future<Result<List<Note>>> _getCachedNotes() async {
+    final box = await _hive.openBox<Map>(_cacheBox);
+    if (box.isEmpty) {
+      return Result.failure('No cached notes available');
+    }
+    final notes = box.values
+        .map((m) => Note.fromJson(Map<String, dynamic>.from(m)))
+        .toList();
+    return Result.success(notes);
+  }
+}
+```
+
+### Dependency Injection Setup
+
+```dart
+Future<void> configureDependencies() async {
+  // Database services (singletons)
+  getIt.registerLazySingleton<DatabaseService>(
+    () => FirebaseDatabaseService(),
+  );
+
+  getIt.registerLazySingleton<StorageService>(
+    () => FirebaseStorageService(),
+  );
+
+  // Repositories
+  getIt.registerLazySingleton(() => NotesRepository(
+    getIt<DatabaseService>(),
+    getIt<StorageService>(),
+    getIt<HiveInterface>(),
+    getIt<ConnectivityService>(),
+  ));
+}
+```
+
+### Sync Status Tracking
+
+```dart
+@freezed
+class SyncStatus with _$SyncStatus {
+  const factory SyncStatus.synced() = _Synced;
+  const factory SyncStatus.pending() = _Pending;
+  const factory SyncStatus.error(String message) = _Error;
+}
+
+/// Extend your models to track sync state
+@freezed
+class Note with _$Note {
+  const factory Note({
+    required String id,
+    required String title,
+    required String content,
+    String? imageUrl,
+    @Default(SyncStatus.synced()) SyncStatus syncStatus,
+  }) = _Note;
+
+  factory Note.fromJson(Map<String, dynamic> json) => _$NoteFromJson(json);
+}
+```
+
+### Firebase Security Rules (Firestore)
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can only access their own documents
+    match /{collection}/{docId} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.userId;
+    }
+  }
+}
+```
+
+### Firebase Security Rules (Storage)
+
+```javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Users can only access their own files
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+### When to Use Real-Time Listeners
+
+| Use Case | Real-Time? | Why |
+|----------|-----------|-----|
+| Personal notes/logs | ❌ No | Single user, pull-to-refresh sufficient |
+| Photo uploads | ❌ No | Async processing, poll for status |
+| Chat messages | ✅ Yes | Multi-user, instant updates expected |
+| Shared documents | ✅ Yes | Collaboration requires live sync |
+| Notifications | ✅ Yes | Time-sensitive |
+
+### Testing Database Layer
+
+```dart
+class MockDatabaseService extends Mock implements DatabaseService {}
+
+void main() {
+  late NotesRepository repository;
+  late MockDatabaseService db;
+  late MockStorageService storage;
+  late MockConnectivityService connectivity;
+
+  setUp(() {
+    db = MockDatabaseService();
+    storage = MockStorageService();
+    connectivity = MockConnectivityService();
+    repository = NotesRepository(db, storage, mockHive, connectivity);
+  });
+
+  test('creates note in Firestore when online', () async {
+    when(() => connectivity.currentState)
+        .thenReturn(const ConnectivityState.online());
+    when(() => db.createDocument(
+      collection: any(named: 'collection'),
+      data: any(named: 'data'),
+    )).thenAnswer((_) async => 'doc123');
+
+    final result = await repository.createNote(
+      title: 'Test',
+      content: 'Content',
+    );
+
+    expect(result, isA<Success<Note>>());
+    verify(() => db.createDocument(
+      collection: 'notes',
+      data: any(named: 'data'),
+    )).called(1);
+  });
+
+  test('returns cached notes when offline', () async {
+    when(() => connectivity.currentState)
+        .thenReturn(const ConnectivityState.offline());
+    // Setup mock Hive box with cached data
+
+    final result = await repository.getNotes();
+
+    expect(result, isA<Success<List<Note>>>());
+    verifyNever(() => db.queryDocuments(collection: any(named: 'collection')));
+  });
 }
 ```
 
