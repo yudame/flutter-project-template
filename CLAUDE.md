@@ -8,7 +8,8 @@ This is a **documentation-only Flutter architecture template** for small teams (
 
 ## Key Files
 
-- `docs/architecture.md` - Complete architecture specification (tech stack, patterns, code examples)
+- `docs/architecture.md` - Reference guidelines + **planned features** (Database Layer)
+- `docs/implemented.md` - Documentation for already-built features (connectivity, network, offline queue, BLoC patterns)
 - `docs/setup_reference.md` - Environment setup and critical implementation patterns
 
 ## Architecture Principles
@@ -82,8 +83,8 @@ Use Hive with command pattern (RequestType enum + params map) for serializable q
 ### BLoC Testing
 Target 90%+ coverage on BLoCs using bloc_test and mocktail.
 
-### Database Pattern
-Core principle: `User → owns many → Documents (with optional media)`. Use abstract `DatabaseService` interface so repositories don't depend on Firebase/Supabase directly. Combine remote database with local Hive cache for offline support.
+### Database Pattern (Planned)
+Core principle: `User → owns many → Documents (with optional media)`. Use abstract `DatabaseService` interface so repositories don't depend on Firebase/Supabase directly. Combine remote database with local Hive cache for offline support. **Note: Not yet implemented - see architecture.md for plan.**
 
 ## Tech Stack Reference
 
