@@ -76,3 +76,9 @@ lib/generated_plugin_registrant.dart
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.dart_tool/package_config.json
+
+# Sphinx documentation build
+docs/sphinx/build/
+docs/sphinx/source/implemented.md
+docs/sphinx/source/architecture.md
+docs/sphinx/source/setup_reference.md

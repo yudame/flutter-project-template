@@ -1,0 +1,48 @@
+/* Custom CSS for Flutter Project Template Docs */
+
+:root {
+    --primary-color: #0175C2;    /* Flutter blue */
+    --secondary-color: #54C5F8;  /* Flutter light blue */
+    --text-color: #1f2937;
+    --background-color: #ffffff;
+    --link-color: #0175C2;
+    --link-hover-color: #54C5F8;
+    --code-background: #f1f5f9;
+}
+
+body {
+    color: var(--text-color);
+    background-color: var(--background-color);
+}
+
+a {
+    color: var(--link-color);
+}
+
+a:hover {
+    color: var(--link-hover-color);
+}
+
+.wy-side-nav-search {
+    background-color: var(--primary-color);
+}
+
+.wy-nav-top {
+    background-color: var(--primary-color);
+}
+
+.wy-menu-vertical header, .wy-menu-vertical p.caption {
+    color: var(--secondary-color);
+}
+
+code, .rst-content tt, .rst-content code {
+    background-color: var(--code-background);
+    border: none;
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+
+.rst-content div[class^="highlight"] {
+    border-radius: 3px;
+    border: 1px solid #e5e7eb;
+}

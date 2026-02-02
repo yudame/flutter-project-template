@@ -11,8 +11,6 @@ This template provides everything you need to:
 
 # Part 1: Quick Setup & Environment
 
----
-
 ## Quick Project Creation (5 Minutes)
 
 ```bash
@@ -206,8 +204,6 @@ pod install
 ---
 
 # Part 2: Critical Implementation Details
-
----
 
 Design decisions for non-trivial aspects that need explicit solutions before implementation.
 
