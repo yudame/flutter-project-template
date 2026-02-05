@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../analytics/analytics_service.dart';
 import '../analytics/noop_analytics_service.dart';
+import '../database/local_cache_service.dart';
 import '../connectivity/connectivity_bloc.dart';
 import '../connectivity/connectivity_service.dart';
 import '../network/auth_token_manager.dart';
@@ -50,6 +51,16 @@ Future<void> configureDependencies() async {
   getIt.registerLazySingleton<AnalyticsService>(
     () => NoopAnalyticsService(),
   );
+
+  // Database (local cache — register concrete DatabaseService when choosing a provider)
+  getIt.registerLazySingleton<LocalCacheService>(
+    () => LocalCacheService(hive: getIt<HiveInterface>()),
+  );
+
+  // When using a concrete database service:
+  // getIt.registerLazySingleton<DatabaseService>(
+  //   () => FirebaseDatabaseService(),
+  // );
 
   // Auth Token Manager
   getIt.registerLazySingleton<AuthTokenManager>(
