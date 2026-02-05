@@ -1,0 +1,91 @@
+{
+  "@@locale": "en",
+  "appTitle": "My App",
+  "@appTitle": {
+    "description": "The application title shown in app bar and system"
+  },
+  "welcomeMessage": "Welcome, {name}!",
+  "@welcomeMessage": {
+    "description": "Greeting message shown after user logs in",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "John"
+      }
+    }
+  },
+  "itemCount": "{count, plural, =0{No items} =1{1 item} other{{count} items}}",
+  "@itemCount": {
+    "description": "Shows the number of items in a list",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "errorGeneric": "Something went wrong. Please try again.",
+  "@errorGeneric": {
+    "description": "Generic error message for unexpected failures"
+  },
+  "errorNetwork": "Network error. Please check your connection.",
+  "@errorNetwork": {
+    "description": "Error message when network request fails"
+  },
+  "errorNotFound": "The requested item was not found.",
+  "@errorNotFound": {
+    "description": "Error message when resource is not found"
+  },
+  "buttonRetry": "Retry",
+  "@buttonRetry": {
+    "description": "Button label to retry a failed action"
+  },
+  "buttonCancel": "Cancel",
+  "@buttonCancel": {
+    "description": "Button label to cancel an action"
+  },
+  "buttonSave": "Save",
+  "@buttonSave": {
+    "description": "Button label to save changes"
+  },
+  "buttonDelete": "Delete",
+  "@buttonDelete": {
+    "description": "Button label to delete an item"
+  },
+  "buttonEdit": "Edit",
+  "@buttonEdit": {
+    "description": "Button label to edit an item"
+  },
+  "buttonAdd": "Add",
+  "@buttonAdd": {
+    "description": "Button label to add a new item"
+  },
+  "buttonConfirm": "Confirm",
+  "@buttonConfirm": {
+    "description": "Button label to confirm an action"
+  },
+  "loadingMessage": "Loading...",
+  "@loadingMessage": {
+    "description": "Message shown while content is loading"
+  },
+  "emptyListTitle": "No items yet",
+  "@emptyListTitle": {
+    "description": "Title shown when a list is empty"
+  },
+  "emptyListSubtitle": "Add your first item to get started",
+  "@emptyListSubtitle": {
+    "description": "Subtitle shown when a list is empty"
+  },
+  "connectionOnline": "Connected",
+  "@connectionOnline": {
+    "description": "Status shown when device is online"
+  },
+  "connectionOffline": "Offline",
+  "@connectionOffline": {
+    "description": "Status shown when device is offline"
+  },
+  "connectionPoor": "Poor connection",
+  "@connectionPoor": {
+    "description": "Status shown when connection is slow"
+  }
+}

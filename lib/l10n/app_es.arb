@@ -1,0 +1,22 @@
+{
+  "@@locale": "es",
+  "appTitle": "Mi App",
+  "welcomeMessage": "¡Bienvenido, {name}!",
+  "itemCount": "{count, plural, =0{Sin elementos} =1{1 elemento} other{{count} elementos}}",
+  "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo.",
+  "errorNetwork": "Error de red. Por favor, verifica tu conexión.",
+  "errorNotFound": "El elemento solicitado no fue encontrado.",
+  "buttonRetry": "Reintentar",
+  "buttonCancel": "Cancelar",
+  "buttonSave": "Guardar",
+  "buttonDelete": "Eliminar",
+  "buttonEdit": "Editar",
+  "buttonAdd": "Agregar",
+  "buttonConfirm": "Confirmar",
+  "loadingMessage": "Cargando...",
+  "emptyListTitle": "Sin elementos aún",
+  "emptyListSubtitle": "Agrega tu primer elemento para comenzar",
+  "connectionOnline": "Conectado",
+  "connectionOffline": "Sin conexión",
+  "connectionPoor": "Conexión lenta"
+}

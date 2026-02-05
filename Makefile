@@ -1,4 +1,4 @@
-.PHONY: help setup clean build test analyze format gen watch run
+.PHONY: help setup clean build test analyze format gen watch run l10n l10n-check l10n-sort
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -58,3 +58,14 @@ upgrade: ## Upgrade Flutter dependencies
 
 outdated: ## Check for outdated packages
 	flutter pub outdated
+
+# === Localization ===
+
+l10n: ## Generate localization files
+	flutter gen-l10n
+
+l10n-check: ## Check for missing translations
+	./scripts/l10n/check-missing.sh
+
+l10n-sort: ## Sort ARB files alphabetically
+	./scripts/l10n/sort-arb.sh
