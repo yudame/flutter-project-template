@@ -6,6 +6,8 @@ import 'package:hive/hive.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../analytics/analytics_service.dart';
+import '../analytics/noop_analytics_service.dart';
 import '../connectivity/connectivity_bloc.dart';
 import '../connectivity/connectivity_service.dart';
 import '../network/auth_token_manager.dart';
@@ -43,6 +45,11 @@ Future<void> configureDependencies() async {
 
   getIt.registerLazySingleton<HiveInterface>(() => Hive);
   getIt.registerLazySingleton<Connectivity>(() => Connectivity());
+
+  // Analytics (use NoopAnalyticsService by default, replace with Firebase in production)
+  getIt.registerLazySingleton<AnalyticsService>(
+    () => NoopAnalyticsService(),
+  );
 
   // Auth Token Manager
   getIt.registerLazySingleton<AuthTokenManager>(
