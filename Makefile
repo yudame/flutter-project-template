@@ -3,9 +3,8 @@
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-setup: ## Install dependencies and setup project
-	flutter pub get
-	make gen
+setup: ## Initial project setup (deps, codegen, l10n)
+	./scripts/setup.sh
 
 clean: ## Clean build artifacts
 	flutter clean

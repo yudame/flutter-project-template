@@ -149,6 +149,31 @@ GoRoute(
 ),
 ```
 
+## Creating New Features
+
+This template includes Claude commands for rapid scaffolding:
+
+| Command | Description |
+|---------|-------------|
+| `/new-feature` | Scaffold complete feature module (model, repo, BLoC, page, tests) |
+| `/new-model` | Create Freezed model with JSON serialization |
+| `/new-bloc` | Create BLoC with Freezed events/states |
+| `/new-repository` | Create connectivity-aware repository |
+| `/new-widget` | Create reusable widget |
+
+### Example: Adding a Profile Feature
+
+```
+/new-feature profile
+```
+
+This creates:
+- `lib/features/profile/` with data and presentation layers
+- `test/features/profile/` with BLoC and repository tests
+- All following template conventions
+
+After scaffolding, register the feature in DI and add routes.
+
 ## Tech Stack
 
 | Category | Package | Purpose |
@@ -169,6 +194,8 @@ GoRoute(
 
 - **[Architecture Guide](docs/architecture.md)** - Complete architecture patterns
 - **[Setup Reference](docs/setup_reference.md)** - Setup and implementation details
+- **[Testing Guide](docs/testing.md)** - Testing patterns and conventions
+- **[Localization Guide](docs/localization.md)** - i18n setup and usage
 
 ## Key Patterns
 
