@@ -1,4 +1,4 @@
-.PHONY: help setup clean build test analyze format gen watch run l10n l10n-check l10n-sort
+.PHONY: help setup clean build test test-coverage test-watch test-file analyze format gen watch run l10n l10n-check l10n-sort
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -22,12 +22,16 @@ build-web: ## Build web app
 	flutter build web --release
 
 test: ## Run all tests
-	flutter test
+	./scripts/test/run-all.sh
 
-test-coverage: ## Run tests with coverage
-	flutter test --coverage
-	genhtml coverage/lcov.info -o coverage/html
-	open coverage/html/index.html
+test-coverage: ## Run tests with coverage report
+	./scripts/test/coverage.sh
+
+test-watch: ## Run tests in watch mode (requires entr)
+	./scripts/test/watch.sh
+
+test-file: ## Run specific test file (FILE=path/to/test.dart)
+	flutter test $(FILE)
 
 analyze: ## Run static analysis
 	flutter analyze
