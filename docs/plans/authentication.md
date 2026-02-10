@@ -1,5 +1,7 @@
 # Plan: Authentication Flow Documentation & Examples
 
+**Tracking**: https://github.com/yudame/flutter-project-template/issues/3
+
 ## Goal
 
 Add authentication documentation, an abstract auth repository interface, AuthBloc for state management, and route guard patterns — enabling teams to quickly implement login/signup flows with their chosen provider (Firebase Auth, Supabase Auth, or custom REST API).
