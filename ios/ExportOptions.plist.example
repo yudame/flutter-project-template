@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  iOS Export Options for App Store distribution
+  Copy this file to ExportOptions.plist and fill in your values
+  NEVER commit ExportOptions.plist with real values to git!
+-->
+<dict>
+    <key>method</key>
+    <string>app-store</string>
+
+    <key>teamID</key>
+    <string>YOUR_APPLE_TEAM_ID</string>
+
+    <key>uploadSymbols</key>
+    <true/>
+
+    <key>uploadBitcode</key>
+    <false/>
+
+    <!-- Optional: specify provisioning profile -->
+    <!--
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.yourcompany.yourapp</key>
+        <string>Your App Store Profile Name</string>
+    </dict>
+    -->
+</dict>
+</plist>

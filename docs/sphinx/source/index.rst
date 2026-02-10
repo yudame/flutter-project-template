@@ -32,6 +32,7 @@ A documentation-only Flutter architecture template for small teams (2-5 people) 
    :caption: DevOps
 
    ci-cd
+   deployment
 
 Indices and tables
 ==================
