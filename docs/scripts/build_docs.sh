@@ -26,6 +26,10 @@ echo "Syncing markdown files..."
 cp "$DOCS_DIR/implemented.md" "$SOURCE_DIR/implemented.md"
 cp "$DOCS_DIR/architecture.md" "$SOURCE_DIR/architecture.md"
 cp "$DOCS_DIR/setup_reference.md" "$SOURCE_DIR/setup_reference.md"
+cp "$DOCS_DIR/database.md" "$SOURCE_DIR/database.md"
+cp "$DOCS_DIR/localization.md" "$SOURCE_DIR/localization.md"
+cp "$DOCS_DIR/analytics.md" "$SOURCE_DIR/analytics.md"
+cp "$DOCS_DIR/testing.md" "$SOURCE_DIR/testing.md"
 
 # Build
 echo "Building HTML documentation..."

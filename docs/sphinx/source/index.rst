@@ -5,12 +5,26 @@ A documentation-only Flutter architecture template for small teams (2-5 people) 
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Getting Started
 
    overview
-   implemented
-   architecture
    setup_reference
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Architecture
+
+   architecture
+   implemented
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Core Systems
+
+   database
+   localization
+   analytics
+   testing
 
 Indices and tables
 ==================
