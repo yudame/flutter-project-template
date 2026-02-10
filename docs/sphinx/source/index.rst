@@ -27,6 +27,12 @@ A documentation-only Flutter architecture template for small teams (2-5 people) 
    analytics
    testing
 
+.. toctree::
+   :maxdepth: 2
+   :caption: DevOps
+
+   ci-cd
+
 Indices and tables
 ==================
 

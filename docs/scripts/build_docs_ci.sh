@@ -20,6 +20,7 @@ cp "$DOCS_DIR/database.md" "$SOURCE_DIR/database.md"
 cp "$DOCS_DIR/localization.md" "$SOURCE_DIR/localization.md"
 cp "$DOCS_DIR/analytics.md" "$SOURCE_DIR/analytics.md"
 cp "$DOCS_DIR/testing.md" "$SOURCE_DIR/testing.md"
+cp "$DOCS_DIR/ci-cd.md" "$SOURCE_DIR/ci-cd.md"
 
 # Build HTML (warnings as errors for CI)
 echo "Building HTML documentation..."
