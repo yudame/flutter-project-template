@@ -2,11 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/home/presentation/pages/home_page.dart';
+// Auth imports (uncomment when using authentication):
+// import '../auth/auth_bloc.dart';
+// import '../di/injection.dart';
+// import 'auth_guard.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
   debugLogDiagnostics: true,
+  // Auth guard (uncomment when using authentication):
+  // redirect: authGuard(
+  //   authBloc: getIt<AuthBloc>(),
+  //   loginPath: '/login',
+  //   allowedPaths: ['/login', '/signup', '/forgot-password'],
+  // ),
   routes: [
+    // Login route (uncomment when using authentication):
+    // GoRoute(
+    //   path: '/login',
+    //   name: 'login',
+    //   builder: (context, state) => const LoginPage(),
+    // ),
     GoRoute(
       path: '/',
       name: 'home',

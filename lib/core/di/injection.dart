@@ -126,4 +126,16 @@ Future<void> configureDependencies() async {
       connectivityBloc: getIt<ConnectivityBloc>(),
     ),
   );
+
+  // Auth (uncomment after implementing AuthRepository)
+  // Import: import '../auth/auth_bloc.dart';
+  // Import: import '../auth/auth_repository.dart';
+  //
+  // getIt.registerLazySingleton<AuthRepository>(
+  //   () => FirebaseAuthRepository(tokenManager: getIt<AuthTokenManager>()),
+  // );
+  //
+  // getIt.registerLazySingleton<AuthBloc>(
+  //   () => AuthBloc(authRepository: getIt<AuthRepository>()),
+  // );
 }

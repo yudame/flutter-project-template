@@ -21,6 +21,7 @@ A documentation-only Flutter architecture template for small teams (2-5 people) 
    :maxdepth: 2
    :caption: Core Systems
 
+   authentication
    database
    localization
    analytics
