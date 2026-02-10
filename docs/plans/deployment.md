@@ -24,6 +24,7 @@ Comprehensive deployment guide covering:
 - `key.properties` setup (gitignored, never committed)
 - AAB vs APK: Play Store requires AAB for new apps
 - Play Console walkthrough
+- Internal testing track for beta distribution (Android's TestFlight equivalent)
 - Testing tracks: internal → closed → open → production
 - Staged rollouts (1% → 5% → 20% → 100%)
 
@@ -34,6 +35,8 @@ Comprehensive deployment guide covering:
 - App Store Connect setup
 - TestFlight for beta distribution
 - App Review guidelines and common rejection reasons
+
+Note: Both platforms have beta testing mechanisms - Android uses Internal/Closed testing tracks, iOS uses TestFlight.
 
 #### Versioning Strategy
 - Semantic versioning in `pubspec.yaml`: `version: 1.2.3+45`
