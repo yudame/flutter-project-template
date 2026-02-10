@@ -1,20 +1,32 @@
 # Plan: Sphinx Documentation Site
 
+**Tracking**: https://github.com/yudame/flutter-project-template/issues/10
+
 ## Goal
 
 Add a published documentation site to this Flutter template repo, matching the pattern used in [django-project-template](https://github.com/yudame/django-project-template). Auto-built and deployed to GitHub Pages on every push to main.
 
 ## Current State
 
-- 3 Markdown docs: `architecture.md` (665 lines), `implemented.md` (816 lines), `setup_reference.md` (753 lines)
-- `README.md` (242 lines)
-- No CI/CD, no `.github/` directory, no docs site
+- 7 Markdown docs in `docs/`:
+  - `architecture.md` — Reference guidelines + planned features
+  - `implemented.md` — Documentation for already-built features
+  - `setup_reference.md` — Environment setup and critical patterns
+  - `database.md` — Database layer patterns (NEW)
+  - `localization.md` — i18n guide (NEW)
+  - `analytics.md` — Analytics patterns (NEW)
+  - `testing.md` — Testing philosophy and patterns (NEW)
+- 7 plan docs in `docs/plans/`
+- `README.md` with scaffolding section
+- No CI/CD workflows yet
+- No `.github/` directory
+- No docs site
 
 ## Approach
 
 Use **Sphinx + myst_parser** so our existing Markdown files are used directly — no need to rewrite anything in RST. Only the index/toctree files will be RST.
 
-Since this is a docs-only template (no Dart source code), we skip autodoc/apidoc entirely. Much simpler than the Django setup.
+Since this is a docs-only template (no Dart source code to document), we skip autodoc/apidoc entirely. Much simpler than the Django setup.
 
 ---
 
@@ -30,18 +42,32 @@ Sphinx configuration:
 
 ### 2. `docs/sphinx/source/index.rst`
 Main toctree pointing to our existing Markdown files:
-```
+```rst
 Flutter Project Template
 ========================
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Getting Started
 
    overview
-   implemented
-   architecture
    setup_reference
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Architecture
+
+   architecture
+   implemented
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Core Systems
+
+   database
+   localization
+   analytics
+   testing
 
 Indices and tables
 ==================
@@ -56,7 +82,16 @@ New file — brief intro page covering:
 - Links to each section
 
 ### 4. Symlinks or copies for existing docs
-Symlink `docs/sphinx/source/implemented.md` → `../../implemented.md` (and same for architecture.md, setup_reference.md) so content lives in one place. If symlinks cause CI issues, the build script will copy them instead.
+At build time, copy/symlink these files into `docs/sphinx/source/`:
+- `architecture.md`
+- `implemented.md`
+- `setup_reference.md`
+- `database.md`
+- `localization.md`
+- `analytics.md`
+- `testing.md`
+
+Use copies in the build script (symlinks can cause issues in CI).
 
 ### 5. `docs/sphinx/source/_static/css/custom.css`
 Light custom theming (color variables, code block styling). Match the Django template's approach but with Flutter-appropriate colors (blue/cyan).
@@ -70,12 +105,12 @@ Standard Sphinx Makefile with targets:
 ### 7. `docs/scripts/build_docs.sh`
 Local build script:
 - Ensure pip deps installed (sphinx, sphinx-rtd-theme, myst-parser, linkify-it-py)
-- Copy/symlink markdown files into source dir
+- Copy markdown files into source dir
 - Run `sphinx-build -b html source build/html`
 - Print success message with path
 
 ### 8. `docs/scripts/build_docs_ci.sh`
-CI build script (simpler than Django's — no runtime dependency):
+CI build script:
 - Install deps
 - Copy markdown files into sphinx source dir
 - Build HTML
@@ -99,6 +134,7 @@ Add `docs/sphinx/build/` to gitignore.
 - **No complex CI fallback script** — Django needed 419 lines because it has a runtime dependency. We don't.
 - **No RST rewrites** — myst_parser lets Sphinx consume our existing Markdown directly
 - **No content changes** — existing docs stay as-is. We're just wrapping them in a site.
+- **No plans in the docs site** — keep plans internal, not published
 
 ## Structure After Implementation
 
@@ -111,7 +147,11 @@ flutter-project-template/
 │   ├── architecture.md          # (unchanged)
 │   ├── implemented.md           # (unchanged)
 │   ├── setup_reference.md       # (unchanged)
-│   ├── plans/
+│   ├── database.md              # (unchanged)
+│   ├── localization.md          # (unchanged)
+│   ├── analytics.md             # (unchanged)
+│   ├── testing.md               # (unchanged)
+│   ├── plans/                   # (unchanged, not in docs site)
 │   ├── scripts/
 │   │   ├── build_docs.sh        # Local build
 │   │   └── build_docs_ci.sh     # CI build
@@ -124,11 +164,11 @@ flutter-project-template/
 │       │   ├── _static/
 │       │   │   └── css/
 │       │   │       └── custom.css
-│       │   └── (symlinks or copies of *.md at build time)
+│       │   └── (copies of *.md at build time)
 │       └── build/                # (gitignored)
 └── ...
 ```
 
 ## Estimated Work
 
-~10 files, all config/scaffolding. No content authoring needed. Should take one focused session.
+~10 files, all config/scaffolding. No content authoring needed (except `overview.md`). Should take one focused session.
