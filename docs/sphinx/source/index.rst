@@ -24,6 +24,7 @@ A documentation-only Flutter architecture template for small teams (2-5 people) 
    authentication
    database
    payments
+   push-notifications
    localization
    analytics
    testing

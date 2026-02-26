@@ -23,6 +23,7 @@ cp "$DOCS_DIR/testing.md" "$SOURCE_DIR/testing.md"
 cp "$DOCS_DIR/ci-cd.md" "$SOURCE_DIR/ci-cd.md"
 cp "$DOCS_DIR/deployment.md" "$SOURCE_DIR/deployment.md"
 cp "$DOCS_DIR/payments.md" "$SOURCE_DIR/payments.md"
+cp "$DOCS_DIR/push-notifications.md" "$SOURCE_DIR/push-notifications.md"
 
 # Build HTML (warnings as errors for CI)
 echo "Building HTML documentation..."
