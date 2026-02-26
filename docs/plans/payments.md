@@ -1,8 +1,12 @@
 # Stripe Payment Processing Plan
 
+**Issue:** https://github.com/yudame/flutter-project-template/issues/11
+
 ## Goal
 
-Add Stripe payment processing architecture documentation and starter code to the template. The key challenge is defining **where each concern lives** in a three-party system (mobile app, API server, Stripe) and **where ground truth resides** for each piece of data.
+Add Stripe payment processing architecture documentation to the template. Define where each concern lives in the three-party system (mobile app, API server, Stripe), where ground truth resides, and reference official Stripe documentation so future developers can check for SDK updates.
+
+This is a **documentation-only deliverable** — architecture guide, patterns, and references. No committed application code beyond example snippets in the docs.
 
 ## The Three-Party Problem
 
@@ -19,7 +23,7 @@ Payment processing creates a unique architectural challenge. Unlike auth or data
    Cache state      Webhook handler    Subscription mgmt
 ```
 
-**Critical principle: The mobile app NEVER talks directly to Stripe for server-side operations.** The app only uses Stripe's client SDK for secure card collection (Elements/PaymentSheet) and 3D Secure confirmation.
+**Critical principle: The mobile app NEVER talks directly to Stripe for server-side operations.** The app only uses Stripe's client SDK for secure card collection (PaymentSheet) and 3D Secure confirmation.
 
 ## Ground Truth Ownership
 
@@ -38,216 +42,127 @@ Payment processing creates a unique architectural challenge. Unlike auth or data
 
 > **Stripe is ground truth for payment state. Your server is ground truth for business state. Your app is a read-through cache of both.**
 
-The server listens to Stripe webhooks to keep its local state in sync. The app reads from the server. The app NEVER determines payment success from its own state — it always confirms with the server, which confirmed with Stripe.
+## Stripe Documentation References
 
-## Architecture by Responsibility
+These are the canonical sources. Always check for latest SDK versions and API changes.
 
-### Mobile App (Flutter)
+### Flutter / Mobile SDK
+- **flutter_stripe package**: https://pub.dev/packages/flutter_stripe
+- **Stripe React Native SDK** (upstream of flutter_stripe): https://docs.stripe.com/payments/accept-a-payment?platform=react-native
+- **PaymentSheet integration**: https://docs.stripe.com/payments/accept-a-payment?platform=react-native&ui=payment-sheet
+- **Mobile payment element**: https://docs.stripe.com/payments/mobile-payment-element
 
-**What it does:**
-- Presents Stripe PaymentSheet / CardField for secure card collection
-- Displays payment status, subscription info, purchase history
-- Handles 3D Secure / SCA authentication flows (Stripe SDK manages this)
-- Caches payment status locally for offline display
-- Sends purchase requests to API server (NOT to Stripe directly)
+### Server-Side
+- **PaymentIntents API**: https://docs.stripe.com/api/payment_intents
+- **Subscriptions API**: https://docs.stripe.com/api/subscriptions
+- **Customers API**: https://docs.stripe.com/api/customers
+- **Webhook events**: https://docs.stripe.com/webhooks
+- **Webhook event types reference**: https://docs.stripe.com/api/events/types
+- **Stripe CLI (local webhook testing)**: https://docs.stripe.com/stripe-cli
 
-**What it does NOT do:**
-- Create PaymentIntents (server does this)
-- Validate prices or compute totals (server does this)
-- Store raw card numbers (Stripe SDK handles PCI compliance)
-- Determine payment success independently (server confirms via webhooks)
+### Architecture & Best Practices
+- **Accept a payment (full guide)**: https://docs.stripe.com/payments/accept-a-payment
+- **Subscription integration guide**: https://docs.stripe.com/billing/subscriptions/build-subscriptions
+- **SCA / 3D Secure**: https://docs.stripe.com/payments/3d-secure
+- **Idempotent requests**: https://docs.stripe.com/api/idempotent_requests
+- **Testing with test clocks**: https://docs.stripe.com/billing/testing/test-clocks
+- **Stripe test card numbers**: https://docs.stripe.com/testing#cards
 
-**Key packages:**
-- `flutter_stripe` — Stripe SDK for Flutter (PaymentSheet, CardField, 3DS)
+### Platform Policy (Important)
+- **Apple IAP requirements**: https://developer.apple.com/app-store/review/guidelines/#in-app-purchase — If your app sells digital goods/services consumed within the app, Apple requires IAP. Stripe is only permitted for physical goods, services delivered outside the app, or person-to-person payments.
+- **Google Play billing policy**: https://support.google.com/googleplay/android-developer/answer/9858738 — Similar restrictions for digital goods.
 
-### API Server
+## Deliverables
 
-**What it does:**
-- Creates Stripe Customers (linked to app users)
-- Creates PaymentIntents / SetupIntents with correct amounts
-- Validates orders, applies business rules (discounts, limits, eligibility)
-- Manages Stripe Subscriptions (create, update, cancel)
-- Receives and processes Stripe webhooks (the critical sync mechanism)
-- Maintains local payment/subscription state (synced from webhooks)
-- Exposes REST endpoints for the app to query payment status
-- Enforces entitlements based on subscription status
+### 1. Documentation (`docs/payments.md`)
 
-**Webhook-driven state sync:**
-```
-Stripe Event                    → Server Action
-─────────────────────────────── → ──────────────────────────
-payment_intent.succeeded        → Mark order as paid, grant access
-payment_intent.payment_failed   → Mark order as failed, notify user
-customer.subscription.created   → Record subscription, grant tier access
-customer.subscription.updated   → Update tier, handle plan changes
-customer.subscription.deleted   → Revoke access, handle grace period
-invoice.paid                    → Extend subscription period
-invoice.payment_failed          → Flag account, start dunning
-```
+Comprehensive payment architecture guide covering:
 
-### Stripe
+- Three-party architecture explanation with responsibility matrix
+- Ground truth ownership table
+- Payment flows with sequence diagrams (one-time + subscription)
+- What the mobile app handles vs what the server handles
+- Server API contract (required endpoints + webhook handlers)
+- `flutter_stripe` setup and PaymentSheet integration pattern
+- Connectivity-aware payment status caching (follows existing offline patterns)
+- BLoC pattern for payment state (example code, not committed)
+- Security considerations (PCI compliance, idempotency, webhook verification)
+- Testing strategy (Stripe test mode, test cards, test clocks)
+- Edge cases and failure modes
+- Full Stripe documentation reference links (see above)
+- iOS/Android platform policy warnings re: digital goods
 
-**What it manages:**
-- PCI-compliant card storage and tokenization
-- Payment processing and settlement
-- Subscription billing cycles and retry logic
-- 3D Secure / SCA authentication
-- Receipts and invoices
-- Dispute management
+### 2. Claude Command (`.claude/commands/add-payments.md`)
 
-## Payment Flows
+Step-by-step scaffolding guide that:
+- Installs `flutter_stripe` package
+- Creates `lib/core/payments/` directory with example files
+- Registers services in get_it
+- Adds Stripe publishable key to environment config
+- References Stripe docs for server-side setup
 
-### One-Time Payment Flow
+### 3. Update Sphinx Docs
+- Add payments.md to sphinx source
+- Update index.rst with Payments section under Core Systems
+- Update build scripts to copy payments.md
+
+## What We're NOT Building
+
+- **No committed app code** — This is a template. Example code lives in docs only.
+- **No server implementation** — We document the server contract and link to Stripe's server guides.
+- **No Apple/Google IAP** — Stripe only. IAP is a separate concern (document the policy boundary).
+- **No Stripe Connect** — Marketplace/platform payments are out of scope.
+- **No invoicing** — Simple checkout and subscription patterns only.
+
+## Payment Flows to Document
+
+### One-Time Payment
 
 ```
 App                          Server                      Stripe
  │                              │                           │
  │  1. POST /checkout           │                           │
  │  {items, quantities}  ──────►│                           │
- │                              │  2. Validate order         │
- │                              │  3. Calculate total        │
- │                              │                           │
- │                              │  4. Create PaymentIntent  │
+ │                              │  2. Validate + total       │
+ │                              │  3. Create PaymentIntent  │
  │                              │  {amount, currency} ─────►│
- │                              │                           │
  │                              │  ◄── client_secret ───────│
  │  ◄── {client_secret} ───────│                           │
  │                              │                           │
- │  5. Stripe PaymentSheet      │                           │
- │     (card entry + 3DS)  ────────────────────────────────►│
- │                              │                           │
+ │  4. Stripe PaymentSheet      │                           │
+ │     (card + 3DS)  ──────────────────────────────────────►│
  │  ◄── confirmation ──────────────────────────────────────│
  │                              │                           │
  │                              │  ◄── webhook: succeeded ──│
- │                              │  6. Mark order paid        │
- │                              │  7. Grant entitlements     │
+ │                              │  5. Mark paid, grant access│
  │                              │                           │
- │  8. GET /orders/{id}/status  │                           │
- │  ────────────────────────────►                           │
- │  ◄── {status: paid} ────────│                           │
- │                              │                           │
- │  9. Show success UI          │                           │
+ │  6. Poll /status ───────────►│                           │
+ │  ◄── {paid} ────────────────│                           │
 ```
 
-**Why the app checks the server (step 8), not just the SDK response:**
-The Stripe SDK confirmation (step 6) tells the app "payment was submitted." But the definitive "payment succeeded" comes from the webhook. In most cases they align instantly, but edge cases (bank delays, fraud checks) mean the app should poll/confirm with the server.
-
-### Subscription Flow
+### Subscription
 
 ```
 App                          Server                      Stripe
  │                              │                           │
- │  1. GET /plans               │                           │
- │  ────────────────────────────►  (cached from Stripe     │
- │  ◄── [{plan_id, price}] ────│   Products/Prices API)   │
+ │  1. GET /plans ─────────────►│  (cached from Stripe)    │
+ │  ◄── [{plans}] ────────────│                           │
  │                              │                           │
- │  2. POST /subscriptions      │                           │
- │  {plan_id}  ────────────────►│                           │
- │                              │  3. Create/get Customer   │
- │                              │  4. Create Subscription   │
+ │  2. POST /subscriptions     │                           │
+ │  {plan_id} ────────────────►│  3. Create Subscription  │
  │                              │  {customer, price} ──────►│
- │                              │                           │
  │                              │  ◄── client_secret ───────│
  │  ◄── {client_secret} ───────│                           │
  │                              │                           │
- │  5. Confirm payment          │                           │
- │     (PaymentSheet)  ────────────────────────────────────►│
- │                              │                           │
+ │  4. PaymentSheet ───────────────────────────────────────►│
  │                              │  ◄── webhook: sub.created │
- │                              │  6. Grant tier access      │
+ │                              │  5. Grant tier access      │
  │                              │                           │
- │  7. GET /subscription/status │                           │
- │  ────────────────────────────►                           │
+ │  6. GET /subscription ──────►│                           │
  │  ◄── {tier, expires_at} ────│                           │
 ```
 
-## Deliverables
-
-### 1. Documentation (`docs/payments.md`)
-
-Comprehensive payment integration guide covering:
-- Three-party architecture explanation
-- Ground truth ownership table
-- Payment flows with sequence diagrams
-- Server requirements and webhook setup
-- Mobile app integration with flutter_stripe
-- Security considerations (PCI compliance, idempotency)
-- Testing strategy (Stripe test mode, mock server)
-- Common pitfalls and edge cases
-
-### 2. Mobile App Code (Committed)
-
-#### `lib/core/payments/payment_repository.dart`
-Abstract interface defining the contract:
-```dart
-abstract class PaymentRepository {
-  /// Fetch available plans/products from server
-  Future<Result<List<PaymentPlan>>> getPlans();
-
-  /// Request a checkout session from server, returns client secret
-  Future<Result<CheckoutSession>> createCheckout(CheckoutRequest request);
-
-  /// Confirm payment was processed (poll server after Stripe confirmation)
-  Future<Result<PaymentStatus>> getPaymentStatus(String paymentIntentId);
-
-  /// Get current subscription status
-  Future<Result<SubscriptionStatus>> getSubscriptionStatus();
-
-  /// Request subscription creation, returns client secret
-  Future<Result<CheckoutSession>> createSubscription(String planId);
-
-  /// Cancel subscription
-  Future<Result<void>> cancelSubscription();
-
-  /// Get payment history
-  Future<Result<List<PaymentRecord>>> getPaymentHistory();
-}
-```
-
-#### `lib/core/payments/payment_models.dart`
-Freezed models:
-- `PaymentPlan` — id, name, price, interval, features
-- `CheckoutSession` — clientSecret, paymentIntentId, ephemeralKey, customerId
-- `PaymentStatus` — enum: pending, processing, succeeded, failed, refunded
-- `SubscriptionStatus` — tier, status, currentPeriodEnd, cancelAtPeriodEnd
-- `PaymentRecord` — id, amount, currency, status, createdAt, description
-- `CheckoutRequest` — items, quantities, metadata
-
-#### `lib/core/payments/payment_bloc.dart`
-BLoC for payment state management:
-
-Events:
-- `PlansRequested` — fetch available plans
-- `CheckoutStarted(CheckoutRequest)` — initiate payment
-- `PaymentConfirmed(paymentIntentId)` — app confirms after Stripe SDK
-- `SubscriptionRequested(planId)` — start subscription
-- `SubscriptionCancelled` — cancel subscription
-- `StatusRefreshRequested` — poll current status
-
-States:
-- `PaymentInitial`
-- `PaymentLoading`
-- `PlansLoaded(plans)`
-- `CheckoutReady(session)` — has client_secret, ready for PaymentSheet
-- `PaymentProcessing` — waiting for server confirmation
-- `PaymentSucceeded(record)`
-- `PaymentFailed(error)`
-- `SubscriptionActive(status)`
-- `SubscriptionInactive`
-
-#### `lib/core/payments/stripe_service.dart`
-Thin wrapper around flutter_stripe for testability:
-```dart
-class StripeService {
-  Future<void> initialize(String publishableKey);
-  Future<PaymentSheetResult> presentPaymentSheet(CheckoutSession session);
-  Future<void> confirmPayment(String clientSecret);
-}
-```
-
-### 3. Server Contract Documentation
-
-Document the **required API endpoints** the server must implement:
+## Server Contract to Document
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -260,89 +175,37 @@ Document the **required API endpoints** the server must implement:
 | GET | `/payments/history` | Payment history |
 | POST | `/webhooks/stripe` | Stripe webhook receiver |
 
-Document the **required webhook handlers** the server must implement.
-
-### 4. Claude Commands
-
-#### `.claude/commands/add-payments.md`
-- Install flutter_stripe package
-- Register StripeService and PaymentRepository in get_it
-- Add Stripe publishable key to environment config
-- Scaffold payment UI pages
-
-### 5. Tests
-
-#### `test/core/payments/payment_bloc_test.dart`
-- Plans loading (success, failure)
-- Checkout flow (create → confirm → success/failure)
-- Subscription flow (create → active → cancel)
-- Status polling
-- Error handling
-
-### 6. Update Sphinx Docs
-- Add payments.md to sphinx source
-- Update index.rst with Payments section under Core Systems
-
-## What We're NOT Doing
-
-- **No server implementation** — This is a Flutter template. We document the server contract.
-- **No Apple/Google IAP** — Stripe only. IAP is a separate concern (and required for digital goods on iOS).
-- **No Stripe Connect** — Marketplace/platform payments are out of scope.
-- **No invoicing** — Simple checkout and subscription only.
-- **No real Stripe API calls in tests** — Mock the server, mock StripeService.
-
-## Structure After Implementation
-
-```
-lib/core/payments/
-├── payment_repository.dart    # Abstract interface
-├── payment_models.dart        # Freezed models (plan, status, session, record)
-├── payment_models.freezed.dart
-├── payment_models.g.dart
-├── payment_bloc.dart          # BLoC (events + states + logic)
-├── payment_event.dart         # Freezed events
-├── payment_state.dart         # Freezed states
-└── stripe_service.dart        # Thin Stripe SDK wrapper
-
-docs/
-├── payments.md                # Comprehensive guide
-
-test/core/payments/
-└── payment_bloc_test.dart     # BLoC tests
-
-.claude/commands/
-└── add-payments.md            # Setup command
-```
-
 ## Edge Cases to Document
 
-1. **Payment succeeds on Stripe but webhook fails** — Server must be able to reconcile by querying Stripe API
-2. **User closes app during 3D Secure** — PaymentIntent stays pending; server should handle abandoned intents
+1. **Payment succeeds on Stripe but webhook fails** — Server must reconcile by querying Stripe API
+2. **User closes app during 3D Secure** — PaymentIntent stays pending; handle abandoned intents
 3. **Double-charge prevention** — Idempotency keys on PaymentIntent creation
 4. **Subscription renewal failure** — Dunning (Stripe Smart Retries + webhook handling)
-5. **Offline display** — Cache last-known subscription status, but don't gate features purely on cached state for sensitive access
+5. **Offline display** — Cache last-known subscription status; don't gate sensitive access on cached state alone
 6. **Currency handling** — Always use Stripe's smallest unit (cents), never floating point
 7. **Price changes** — Existing subscriptions keep their price; new subscriptions get new price
 
-## Dependencies
+## Example Code Patterns (In Docs Only)
 
-- Existing `Result<T>` pattern (committed)
-- Existing BLoC patterns (committed)
-- Existing `DioClient` for server communication (committed)
-- Existing connectivity-aware repository pattern (committed)
-- `flutter_stripe` package (to be added)
+The documentation will include example snippets for:
+- `PaymentRepository` abstract interface (follows existing template pattern)
+- `PaymentBloc` events and states (Freezed, follows existing AuthBloc pattern)
+- `StripeService` thin wrapper for testability
+- Freezed models: `PaymentPlan`, `CheckoutSession`, `PaymentStatus`, `SubscriptionStatus`
+- Connectivity-aware payment status caching
+
+These are **reference examples** in markdown, not committed lib/ code.
+
+## Implementation Order
+
+1. Write `docs/payments.md` with all architecture, flows, examples, and Stripe doc links
+2. Create `.claude/commands/add-payments.md`
+3. Update Sphinx docs (index.rst, build scripts)
+4. Commit and close issue
 
 ## Estimated Work
 
-- Documentation: ~2 hours
-- Models + Repository interface: ~1 hour
-- BLoC + Events + States: ~1.5 hours
-- StripeService wrapper: ~30 min
-- Tests: ~1.5 hours
-- Claude command + Sphinx: ~30 min
-- **Total: ~6-7 hours**
-
-## Open Questions
-
-1. **iOS App Store policy**: If the app sells digital goods/services, Apple requires IAP (30% cut). Stripe is only allowed for physical goods/services or out-of-app purchases. This should be prominently documented.
-2. **Should we include a payment UI example page?** Other features (auth, home) include example UI. A checkout page example would be consistent but adds scope.
+- Documentation: ~3 hours
+- Claude command: ~30 min
+- Sphinx integration: ~15 min
+- **Total: ~4 hours**
