@@ -263,6 +263,13 @@ flutter test test/features/home/presentation/bloc/home_bloc_test.dart
 - [ ] Set up CI/CD
 - [ ] Update Android minSdk to 23 (for flutter_secure_storage)
 
+## Running
+
+```bash
+flutter pub get
+flutter run
+```
+
 ## License
 
 MIT License - use freely in your projects.
