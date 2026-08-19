@@ -6,6 +6,8 @@ owner: yudame
 created: 2026-08-19
 tracking: https://github.com/yudame/flutter-project-template/issues/13
 last_comment_id:
+revision_applied: true
+revision_applied_at: 2026-08-19T06:06:27Z
 ---
 
 # Make the template a runnable Android project (missing Gradle scaffolding)
@@ -152,7 +154,7 @@ No race conditions identified — all operations are synchronous and single-thre
 
 ## No-Gos (Out of Scope)
 
-- [SEPARATE-SLUG] Release signing setup (creating a real `key.properties` + keystore and verifying `make build-android` / `flutter build apk --release`) — out of scope because it requires a real keystore and secrets that must not be committed. The acceptance criteria only require the debug build. Filed as a follow-up concern in Open Questions rather than a separate issue at this time.
+- [SEPARATE-SLUG] Release signing setup (creating a real `key.properties` + keystore and verifying `make build-android` / `flutter build apk --release`) — out of scope because it requires a real keystore and secrets that must not be committed. The acceptance criteria only require the debug build. **The release build (`make build-android`) is NOT verified by this fix**; it is deferred to a concrete follow-up issue, "Release signing: key.properties + keystore for make build-android" (owner: yudame), linked to #13 (resolves CONCERN 2).
 - [EXTERNAL] Installing/verifying the Android SDK, JDK, or licenses on a developer machine — a human/environment action, not a repo change.
 
 ## Update System
@@ -178,10 +180,11 @@ No documentation site changes required.
 
 - [ ] `flutter build apk --debug` succeeds from a clean checkout.
 - [ ] `android/` contains the standard manifest, gradle files, wrapper, and resources.
-- [ ] The Android applicationId/package matches the template's `pubspec.yaml` name (`flutter_template`).
+- [ ] The generated Android applicationId/package derives from the template's `pubspec.yaml` name — it contains `flutter_template`. Flutter emits the `com.example.flutter_template` applicationId, which is acceptable for a template (substring match, not literal equality — resolves NIT).
 - [ ] `minSdk = 23` is set in `android/app/build.gradle.kts` (for `flutter_secure_storage`).
 - [ ] The existing 2 tracked files (`GeneratedPluginRegistrant.java`, `key.properties.example`) are preserved.
-- [ ] `git status` shows only the intended new `android/` files added.
+- [ ] `git status` shows only new `android/` files added and `key.properties.example` unchanged. `GeneratedPluginRegistrant.java` may appear as `M` (content-identical or content-drifted regeneration is acceptable) — only a deletion of `key.properties.example` or an unexpected new top-level file fails the gate (resolves CONCERN 1).
+- [ ] Release build (`make build-android` / `flutter build apk --release`) is NOT verified by this fix; it is explicitly deferred to the release-signing follow-up issue (resolves CONCERN 2). The debug build is the gate.
 
 ## Team Orchestration
 
@@ -223,7 +226,7 @@ When this plan is executed, the lead agent orchestrates work using Task tools. T
 - **Agent Type**: builder
 - **Parallel**: true
 - Run `flutter create --platforms=android .` from the repo root.
-- Confirm via `git status` that the 2 existing tracked files are preserved and only new `android/` files were added.
+- Confirm via `git status` that the 2 existing tracked files are preserved and only new `android/` files were added. Note: `GeneratedPluginRegistrant.java` may appear as `M` if regeneration drifts content — that is acceptable and does not fail the gate; `key.properties.example` must remain unchanged (resolves CONCERN 1).
 
 ### 2. Apply template customizations
 - **Task ID**: build-android-customize
@@ -244,7 +247,8 @@ When this plan is executed, the lead agent orchestrates work using Task tools. T
 - **Parallel**: false
 - Run `flutter build apk --debug` and confirm exit code 0.
 - Confirm `android/` contains manifest, gradle files, wrapper, and resources.
-- Confirm the applicationId/package matches `flutter_template`.
+- Confirm the applicationId/package contains `flutter_template` (substring match; `com.example.flutter_template` is acceptable — resolves NIT).
+- Capture and record the concrete generated toolchain versions in the completion note: AGP (from `android/settings.gradle.kts`), Gradle wrapper (from `android/gradle/wrapper/gradle-wrapper.properties`), and compileSdk/minSdk (from `android/app/build.gradle.kts`), so the committed toolchain is explicit rather than emergent (resolves CONCERN 3, Open Question 1 decision (a)).
 - Report pass/fail status.
 
 ### 4. Final Validation
@@ -265,8 +269,8 @@ When this plan is executed, the lead agent orchestrates work using Task tools. T
 | Manifest present | `test -f android/app/src/main/AndroidManifest.xml` | exit code 0 |
 | Gradle wrapper present | `test -f android/gradlew` | exit code 0 |
 | minSdk set to 23 | `grep -n 'minSdk = 23' android/app/build.gradle.kts` | exit code 0 |
-| Package matches pubspec | `grep -rn 'applicationId' android/app/build.gradle.kts` | output contains `flutter_template` |
-| Existing files preserved | `git status --porcelain android/` | output does not contain `D ` (no deletions) |
+| Package derives from pubspec | `grep -rn 'applicationId' android/app/build.gradle.kts` | output contains `flutter_template` (substring match; applicationId is `com.example.flutter_template`) |
+| Existing files preserved | `git status --porcelain android/` | no `D ` deletions; `key.properties.example` unchanged; `GeneratedPluginRegistrant.java` may appear as `M` (acceptable) |
 
 ## Critique Results
 
@@ -282,5 +286,16 @@ When this plan is executed, the lead agent orchestrates work using Task tools. T
 
 ## Open Questions
 
-1. **Toolchain pins source**: The issue's Solution Sketch says to "Confirm the toolchain matches the repo's documented pins (AGP 9.0.1, Gradle 9.1.0, JDK 17, Android SDK 36)," but these pins are not documented anywhere in the repo. Should the plan (a) accept whatever `flutter create` generates for Flutter 3.44.8 (current plan), or (b) hard-pin these specific versions in the generated Gradle files? If (b), where do these pins come from?
-2. **Release signing follow-up**: Should a separate issue be filed to set up release signing (real `key.properties` + keystore) and verify `make build-android` (`flutter build apk --release`)? The acceptance criteria only require the debug build, so this is currently deferred.
+1. ~~**Toolchain pins source**~~ **RESOLVED (decision a)** — The issue's Solution Sketch cites pins (AGP 9.0.1, Gradle 9.1.0, JDK 17, Android SDK 36) that are not documented anywhere in the repo. Running `flutter create` and committing the generated Gradle files inherently hard-pins whatever the author's Flutter 3.44.8 emits, so the question was decided implicitly by Task 1. To make the committed toolchain explicit rather than emergent, Task 3 records the concrete generated AGP / Gradle wrapper / compileSdk / minSdk versions in the completion note (resolves CONCERN 3). No hard-pin override of the generated toolchain.
+2. ~~**Release signing follow-up**~~ **RESOLVED (deferred)** — Deferred as a concrete follow-up issue, "Release signing: key.properties + keystore for make build-android" (owner: yudame), linked to #13. This fix verifies only the debug build; `make build-android` / `flutter build apk --release` is explicitly out of scope and NOT verified here (resolves CONCERN 2).
+
+## Implementation Notes (Revision Pass)
+
+Embedded resolutions for the do-plan-critique findings (commit 6e444db, verdict READY TO BUILD with concerns). Each concern's resolution is applied in the plan text and linked where relevant:
+
+- **CONCERN 1 (Risk & Robustness)**: Success criterion 6 and the Verification "Existing files preserved" row now explicitly permit `GeneratedPluginRegistrant.java` appearing as `M` (content-identical or content-drifted regeneration is acceptable), with only a `D ` deletion of `key.properties.example` or an unexpected new top-level file failing the gate. Task 1 carries the same note. The gate is no longer self-contradictory.
+- **CONCERN 2 (Scope & Value)**: The plan is now explicit that `make build-android` / `flutter build apk --release` is NOT verified by this fix — the debug build is the gate. Deferred to a concrete follow-up issue, "Release signing: key.properties + keystore for make build-android" (owner: yudame, linked to #13), noted in No-Gos, Success Criteria, and resolved Open Question 2.
+- **CONCERN 3 (Toolchain)**: Open Question 1 is resolved as decision (a) — accept the toolchain `flutter create` emits. Task 3 now captures and records the concrete generated AGP / Gradle wrapper / compileSdk / minSdk versions in the completion note, making the committed toolchain explicit rather than emergent.
+- **NIT (Scope)**: Verification and Success Criteria now state the applicationId is `com.example.flutter_template` — the "matches pubspec" criterion is a substring match (contains `flutter_template`), not literal equality, and the `com.example` prefix is accepted for a template.
+
+**Revision pass state:** `revision_applied: true` set; `plan_revising` cleared via sdlc-tool meta-set. Plan is settled and ready for build dispatch.
