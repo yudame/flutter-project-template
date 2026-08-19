@@ -1,5 +1,5 @@
 ---
-status: Planning
+status: Ready
 type: chore
 appetite: Small
 owner: orchestrator
@@ -112,8 +112,8 @@ No prerequisites — this work has no external dependencies and requires no envi
 ### Technical Approach
 
 - **CLAUDE.md**: Rewrite the Repository Overview and Project Structure sections to describe the actual source tree (`lib/core/`, `lib/features/`, `lib/shared/`, `lib/l10n/`, `main.dart`). Keep the architecture principles (two-layer, freezed, connectivity-first, BLoC, get_it) — they already match the code. Change "When Implemented" framing to "Implemented."
-- **Auth optionality**: Add a dedicated section (in CLAUDE.md and/or `docs/architecture.md`) covering: (a) what ships (the 4 auth files, `AuthTokenManager` wired into DI), (b) how to enable (uncomment the `AuthRepository`/`AuthBloc` block in `injection.dart`, implement the concrete repository), (c) how to strip (delete `lib/core/auth/`, remove `AuthTokenManager` from `injection.dart` and its consumers `DioClient`/`RequestExecutor`).
-- **network-security-config pattern**: Add a documented pattern (in `docs/setup_reference.md` or a new `docs/network_security_config.md`) with the `base-config cleartextTrafficPermitted="true"` snippet for LAN apps, the manifest `android:networkSecurityConfig` wiring, the per-domain alternative for known hosts, and the security tradeoff note. Do NOT commit the file into the template's minimal android scaffolding — document the pattern for teams to apply.
+- **Auth optionality**: Add a dedicated section in `CLAUDE.md` (primary, resolved location) with a pointer from `docs/architecture.md`, covering: (a) what ships (the 4 auth files, `AuthTokenManager` wired into DI), (b) how to enable (uncomment the `AuthRepository`/`AuthBloc` block in `injection.dart`, implement the concrete repository), (c) how to strip (delete `lib/core/auth/`, remove `AuthTokenManager` from `injection.dart` and its consumers `DioClient`/`RequestExecutor`).
+- **network-security-config pattern**: Add a documented pattern in `docs/setup_reference.md` (resolved location) with the `base-config cleartextTrafficPermitted="true"` snippet for LAN apps, the manifest `android:networkSecurityConfig` wiring, the per-domain alternative for known hosts, and the security tradeoff note. Do NOT commit the file into the template's minimal android scaffolding — document the pattern for teams to apply.
 
 ## Failure Path Test Strategy
 
@@ -167,8 +167,8 @@ No agent integration required — this is a docs-only change; no tool/MCP surfac
 
 ### Feature Documentation
 - [ ] Rewrite `CLAUDE.md` to describe the actual source-bearing template (Repository Overview, Project Structure).
-- [ ] Add auth-optionality section (enable or strip) to `CLAUDE.md` and/or `docs/architecture.md`.
-- [ ] Add network-security-config pattern for LAN apps to `docs/setup_reference.md` (or a new `docs/network_security_config.md`).
+- [ ] Add auth-optionality section (enable or strip) to `CLAUDE.md`, with a pointer from `docs/architecture.md`.
+- [ ] Add network-security-config pattern for LAN apps to `docs/setup_reference.md`.
 
 ### External Documentation Site
 No Sphinx/Read-the-Docs/MkDocs site in this repo — skip.
@@ -273,8 +273,3 @@ When this plan is executed, the lead agent orchestrates work using Task tools. T
 |----------|--------|---------|--------------|---------------------|
 
 ---
-
-## Open Questions
-
-1. **Where should the network-security-config pattern live?** `docs/setup_reference.md` (existing) or a new `docs/network_security_config.md`? The issue says "documented pattern" without specifying a location. Defaulting to `docs/setup_reference.md` unless a dedicated file is preferred.
-2. **Should the auth-optionality section live in CLAUDE.md, `docs/architecture.md`, or both?** CLAUDE.md is the primary AI-facing doc; `docs/architecture.md` is the human-facing reference. Defaulting to CLAUDE.md (primary) with a pointer from `docs/architecture.md`.
