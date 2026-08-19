@@ -4,17 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a **documentation-only Flutter architecture template** for small teams (2-5 people) using AI-assisted development. It contains no source code—only architecture guides and setup documentation to copy into new Flutter projects.
+This is a **source-bearing Flutter architecture template** for small teams (2-5 people) using AI-assisted development. It ships a real, runnable app under `lib/` alongside the architecture guides and setup documentation — use it as the starting point to copy into new Flutter projects.
 
 ## Key Files
 
 - `docs/architecture.md` - Reference guidelines + **planned features** (Database Layer)
 - `docs/implemented.md` - Documentation for already-built features (connectivity, network, offline queue, BLoC patterns)
 - `docs/setup_reference.md` - Environment setup and critical implementation patterns
+- `lib/` - The implemented source tree (see Project Structure below)
 
 ## Architecture Principles
 
-When implementing features based on this template:
+This repository is organized around these principles:
 
 1. **Two-layer architecture** - Presentation + Data only (no separate domain layer)
 2. **Freezed everywhere** - Models, BLoC events, and states use sealed unions
@@ -22,30 +23,36 @@ When implementing features based on this template:
 4. **BLoC pattern** - State management with flutter_bloc + hydrated_bloc
 5. **get_it** - Service locator for dependency injection
 
-## Project Structure (When Implemented)
+## Project Structure
 
 ```
 lib/
+├── main.dart              # App entry point
+├── l10n/                  # Localization (app_en.arb, app_es.arb)
 ├── core/
-│   ├── theme/              # App theme
-│   ├── routes/             # go_router setup
-│   ├── network/            # DioClient, offline queue
-│   ├── database/           # DatabaseService, StorageService (Firebase/Supabase)
-│   ├── connectivity/       # ConnectivityBloc & service
-│   ├── di/                 # get_it configuration
-│   └── utils/              # Logger, constants, extensions
+│   ├── theme/             # AppTheme
+│   ├── routes/            # go_router setup + auth_guard
+│   ├── network/           # DioClient, offline queue, request executor, auth token manager + interceptor
+│   ├── database/          # DatabaseService (interface), LocalCacheService, sync status, cached document
+│   ├── connectivity/      # ConnectivityBloc & service
+│   ├── auth/              # OPTIONAL auth layer (AuthRepository, AuthBloc) — see Optional Authentication
+│   ├── analytics/         # AnalyticsService + NoopAnalyticsService (default)
+│   ├── di/                # get_it configuration
+│   └── utils/             # Result type, connectivity-aware mixin
 ├── features/
-│   └── [feature_name]/
-│       ├── data/
-│       │   ├── models/     # Freezed models
-│       │   ├── repositories/
-│       │   └── datasources/
-│       └── presentation/
-│           ├── bloc/       # BLoC + Freezed events/states
-│           ├── pages/
-│           └── widgets/
+│   └── home/              # Example feature (data + presentation + BLoC)
 └── shared/
+    └── widgets/           # Reusable widgets (error view, connectivity banner, loading, empty state)
 ```
+
+## Optional Authentication
+
+The auth layer ships **unwired**. `lib/core/auth/` contains `AuthRepository`, `AuthBloc`, `AuthEvent`, and `AuthState`, and `AuthTokenManager` + `AuthInterceptor` exist under `lib/core/network/` — but the repository and BLoC are **not** registered in dependency injection (`lib/core/di/injection.dart` has the registrations commented out under an "Auth (uncomment after implementing AuthRepository)" block). Choose one:
+
+- **Enable auth**: implement a concrete `AuthRepository` (the commented block references a `FirebaseAuthRepository` stub to write), then uncomment the `AuthRepository`/`AuthBloc` registrations in `lib/core/di/injection.dart` along with their `auth_bloc.dart`/`auth_repository.dart` imports. `AuthTokenManager`, `AuthInterceptor`, and `RequestExecutor` are already wired and ready once the repository exists.
+- **Strip auth** (full removal): delete `lib/core/auth/` and `test/core/auth/`; remove `AuthTokenManager` from `lib/core/di/injection.dart`, drop the `authManager` dependency from `DioClient` and `RequestExecutor`, delete `auth_interceptor.dart` and `auth_token_manager.dart`, and remove the `auth_exception.dart` import + `on AuthException` catch in `offline_queue.dart`.
+
+See [docs/architecture.md](docs/architecture.md) → Optional Authentication for details.
 
 ## Common Commands
 

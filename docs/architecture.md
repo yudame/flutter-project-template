@@ -153,8 +153,20 @@ lib/
 For teams under 5 people:
 - **Freezed models** already provide immutability and type safety
 - **No business logic complexity** requiring separate entities
-- **AI code generation** works better with simpler structure
+- **AI code generation** works well with simpler structure
 - **Easy to add later** if complexity grows
+
+---
+
+## Optional Authentication
+
+> **Status: UNWIRED** - The auth layer ships in the template but is **not** enabled. See [CLAUDE.md](../CLAUDE.md#optional-authentication) for the enable-or-strip closure.
+
+The template includes `lib/core/auth/` (`AuthRepository`, `AuthBloc`, `AuthEvent`, `AuthState`) plus `AuthTokenManager` and `AuthInterceptor` under `lib/core/network/`. The repository and BLoC are **not** registered in `lib/core/di/injection.dart` (the registrations sit commented out under an "Auth (uncomment after implementing AuthRepository)" block), so a fresh app runs without authentication.
+
+**Enable:** write a concrete `AuthRepository` implementation, then uncomment the `AuthRepository`/`AuthBloc` registrations and their `auth_bloc.dart`/`auth_repository.dart` imports in `injection.dart`. The token manager, interceptor, and request executor are already wired.
+
+**Strip:** delete `lib/core/auth/` and `test/core/auth/`; remove the `AuthTokenManager` registration from `injection.dart`, drop the `authManager` dependency from `DioClient` and `RequestExecutor`, delete `auth_interceptor.dart` and `auth_token_manager.dart`, and remove the `auth_exception.dart` import + `on AuthException` catch in `offline_queue.dart`.
 
 ---
 
