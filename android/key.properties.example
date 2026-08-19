@@ -5,7 +5,7 @@
 # NOTE: The generated android/app/build.gradle.kts currently signs the release
 # build with the debug keystore (Flutter's default). It does NOT yet read this
 # file. Real release signing via key.properties is tracked in the follow-up
-# issue "Release signing: key.properties + keystore for make build-android".
+# issue #18 "Release signing: key.properties + keystore for make build-android".
 # Keep this example as the reference format for when that is wired in.
 
 storePassword=YOUR_KEYSTORE_PASSWORD
