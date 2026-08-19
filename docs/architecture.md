@@ -166,7 +166,7 @@ The template includes `lib/core/auth/` (`AuthRepository`, `AuthBloc`, `AuthEvent
 
 **Enable:** write a concrete `AuthRepository` implementation, then uncomment the `AuthRepository`/`AuthBloc` registrations and their `auth_bloc.dart`/`auth_repository.dart` imports in `injection.dart`. The token manager, interceptor, and request executor are already wired.
 
-**Strip:** delete `lib/core/auth/` and `test/core/auth/`; remove the `AuthTokenManager` registration from `injection.dart`, drop the `authManager` dependency from `DioClient` and `RequestExecutor`, delete `auth_interceptor.dart` and `auth_token_manager.dart`, and remove the `auth_exception.dart` import + `on AuthException` catch in `offline_queue.dart`.
+**Strip:** delete `lib/core/auth/`, `lib/core/routes/auth_guard.dart`, and `test/core/auth/`; remove the `AuthTokenManager` registration from `injection.dart`, drop the `authManager` dependency from `DioClient` and `RequestExecutor`, delete `auth_interceptor.dart` and `auth_token_manager.dart`, and remove the `auth_exception.dart` import + `on AuthException` catch in `offline_queue.dart`. (The stale, commented-out auth references in `lib/core/routes/app_router.dart` — the `auth_guard`/`auth_bloc`/`injection` imports and the commented `redirect:` block — can also be cleaned up.)
 
 ---
 
