@@ -1,6 +1,14 @@
-# Plan: Streaming Network Layer (SSE) for AI/Chat Features
+---
+status: Ready
+type: feature
+appetite: Medium
+owner: yudame
+created: 2026-08-19
+tracking: https://github.com/yudame/flutter-project-template/issues/14
+last_comment_id:
+---
 
-**Tracking**: https://github.com/yudame/flutter-project-template/issues/14
+# Plan: Streaming Network Layer (SSE) for AI/Chat Features
 
 ## Goal
 
