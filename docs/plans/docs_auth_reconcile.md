@@ -6,6 +6,8 @@ owner: orchestrator
 created: 2026-08-19
 tracking: https://github.com/yudame/flutter-project-template/issues/15
 last_comment_id:
+revision_applied: true
+revision_applied_at: 2026-08-19T06:08:58Z
 ---
 
 # Reconcile Template Docs and Optional-Auth Story
@@ -34,7 +36,7 @@ The template's documentation contradicts its actual state, and the auth layer's 
 - `CLAUDE.md` (Repository Overview) — claims "documentation-only... contains no source code" — still holds; the repo has full source under `lib/`.
 - `lib/core/di/injection.dart` — auth registrations (`AuthRepository`, `AuthBloc`) are commented out under an "Auth (uncomment after implementing AuthRepository)" block — still holds; `AuthTokenManager` is wired, but the auth BLoC/repository are not.
 - `lib/core/auth/` — 4 files present (auth_repository.dart, auth_event.dart, auth_bloc.dart, auth_state.dart), 335 lines total — still holds.
-- No `network_security_config.xml` anywhere in the repo — still holds; `android/app/src/main/` contains only `GeneratedPluginRegistrant.java` (no manifest, no `res/`).
+- No `network_security_config.xml` anywhere in the repo — still holds; `android/app/src/main/` contains only `java/io/flutter/plugins/GeneratedPluginRegistrant.java` (no manifest, no `res/`).
 
 **Cited sibling issues/PRs re-checked:**
 - #3 (Add Authentication Flow Documentation & Examples) — CLOSED. Its plan (`docs/plans/authentication.md`) added auth docs and examples. This issue #15 is a follow-up reconciliation of the *current* state, not a re-do of #3.
@@ -112,7 +114,7 @@ No prerequisites — this work has no external dependencies and requires no envi
 ### Technical Approach
 
 - **CLAUDE.md**: Rewrite the Repository Overview and Project Structure sections to describe the actual source tree (`lib/core/`, `lib/features/`, `lib/shared/`, `lib/l10n/`, `main.dart`). Keep the architecture principles (two-layer, freezed, connectivity-first, BLoC, get_it) — they already match the code. Change "When Implemented" framing to "Implemented."
-- **Auth optionality**: Add a dedicated section in `CLAUDE.md` (primary, resolved location) with a pointer from `docs/architecture.md`, covering: (a) what ships (the 4 auth files, `AuthTokenManager` wired into DI), (b) how to enable (uncomment the `AuthRepository`/`AuthBloc` block in `injection.dart`, implement the concrete repository), (c) how to strip (delete `lib/core/auth/`, remove `AuthTokenManager` from `injection.dart` and its consumers `DioClient`/`RequestExecutor`).
+- **Auth optionality**: Add a dedicated section in `CLAUDE.md` (primary, resolved location) with a pointer from `docs/architecture.md`, covering: (a) what ships (the 4 auth files, `AuthTokenManager` wired into DI), (b) how to enable (uncomment the `AuthRepository`/`AuthBloc` block in `injection.dart`, implement the concrete repository), (c) how to strip — the full removal closure: delete `lib/core/auth/`; remove the `AuthTokenManager` registration from `injection.dart` (and its injection into `DioClient` at `injection.dart` and into `RequestExecutor`); in `lib/core/network/dio_client.dart` remove the `AuthTokenManager` field/constructor param and the `AuthInterceptor` instantiation in `_dio.interceptors.addAll(...)` (plus its `auth_interceptor.dart` import); remove the `AuthTokenManager` field/constructor param from `lib/core/network/request_executor.dart`; and delete `lib/core/network/auth_interceptor.dart` (the third `AuthTokenManager` consumer, instantiated at `dio_client.dart:41`).
 - **network-security-config pattern**: Add a documented pattern in `docs/setup_reference.md` (resolved location) with the `base-config cleartextTrafficPermitted="true"` snippet for LAN apps, the manifest `android:networkSecurityConfig` wiring, the per-domain alternative for known hosts, and the security tradeoff note. Do NOT commit the file into the template's minimal android scaffolding — document the pattern for teams to apply.
 
 ## Failure Path Test Strategy
@@ -181,7 +183,6 @@ None — no code changes.
 - [ ] `CLAUDE.md` accurately describes the template as containing source code (no "documentation-only" / "no source code" framing).
 - [ ] Auth optionality is documented: how to enable (uncomment DI block, implement `AuthRepository`) and how to strip (remove `lib/core/auth/` and `AuthTokenManager` wiring).
 - [ ] A network-security-config pattern for LAN apps is documented (XML snippet + manifest wiring + security tradeoff).
-- [ ] Documentation updated (`/do-docs`).
 
 ## Team Orchestration
 
@@ -234,7 +235,7 @@ When this plan is executed, the lead agent orchestrates work using Task tools. T
 - **Agent Type**: documentarian
 - **Parallel**: true
 - Document how to enable auth (uncomment the `AuthRepository`/`AuthBloc` block in `injection.dart`, implement the concrete repository).
-- Document how to strip auth (remove `lib/core/auth/`, remove `AuthTokenManager` from `injection.dart` and its consumers `DioClient`/`RequestExecutor`).
+- Document how to strip auth — the full removal closure: delete `lib/core/auth/`; remove the `AuthTokenManager` registration from `injection.dart` (and its injection into `DioClient` and `RequestExecutor`); in `lib/core/network/dio_client.dart` remove the `AuthTokenManager` field/constructor param and the `AuthInterceptor` instantiation in `_dio.interceptors.addAll(...)` plus its `auth_interceptor.dart` import; remove the `AuthTokenManager` field/constructor param from `lib/core/network/request_executor.dart`; and delete `lib/core/network/auth_interceptor.dart` (the third `AuthTokenManager` consumer, instantiated at `dio_client.dart:41`).
 
 ### 3. Document network-security-config pattern
 - **Task ID**: build-netsec-docs
@@ -271,5 +272,8 @@ When this plan is executed, the lead agent orchestrates work using Task tools. T
 <!-- Populated by /do-plan-critique (war room). Leave empty until critique is run. -->
 | Severity | Critic | Finding | Addressed By | Implementation Note |
 |----------|--------|---------|--------------|---------------------|
+| High | do-plan-critique | Strip-auth guidance omits the third AuthTokenManager consumer `lib/core/network/auth_interceptor.dart` (instantiated at `dio_client.dart:41`); following the strip verbatim leaves a dangling AuthInterceptor and won't compile. | Task 2 (`build-auth-docs`) + Technical Approach (Auth optionality) | Embed the full removal closure: delete `lib/core/auth/`; remove `AuthTokenManager` registration from `injection.dart` (and injection into `DioClient`/`RequestExecutor`); in `dio_client.dart` remove the `AuthTokenManager` field/param and the `AuthInterceptor` instantiation in `_dio.interceptors.addAll(...)` plus its `auth_interceptor.dart` import; remove `AuthTokenManager` from `request_executor.dart`; delete `lib/core/network/auth_interceptor.dart`. |
+| Medium | do-plan-critique | Success Criterion 4 ("Documentation updated via /do-docs") maps to no task and no verification row, while Task 4 `validate-docs` reports "against all three success criteria" — count mismatch. | Success Criteria section | Drop SC4; the remaining three criteria align 1:1 with Task 4's three verification bullets and the Verification table's three rows. |
+| Nit | do-plan-critique | Freshness-check citation path `android/app/src/main/GeneratedPluginRegistrant.java` is incomplete. | Freshness Check | Include the `java/io/flutter/plugins/` subtree: `android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java`. |
 
 ---
