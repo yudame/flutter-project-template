@@ -299,3 +299,12 @@ Embedded resolutions for the do-plan-critique findings (commit 6e444db, verdict 
 - **NIT (Scope)**: Verification and Success Criteria now state the applicationId is `com.example.flutter_template` — the "matches pubspec" criterion is a substring match (contains `flutter_template`), not literal equality, and the `com.example` prefix is accepted for a template.
 
 **Revision pass state:** `revision_applied: true` set; `plan_revising` cleared via sdlc-tool meta-set. Plan is settled and ready for build dispatch.
+
+## Critique Round 2 (re-critique of the revised plan, commit 610f2e3)
+
+Round 2 re-critique confirms the four round-1 resolutions are embedded in the plan text and close their concerns; no new findings. Verdict: **READY TO BUILD (no concerns)**.
+
+- **CONCERN 1 (GeneratedPluginRegistrant.java `M` tolerance)** — CLOSED. Success Criteria (line 186), Task 1 (line 229), and Verification (line 273) all explicitly permit `GeneratedPluginRegistrant.java` to appear as `M`; only a `D ` deletion of `key.properties.example` or an unexpected new top-level file fails the gate. The gate is no longer self-contradictory.
+- **CONCERN 2 (release-build out-of-scope + follow-up)** — CLOSED. No-Gos (line 157), Success Criteria (line 187), and resolved Open Question 2 (line 290) all state the release build (`make build-android` / `flutter build apk --release`) is NOT verified by this fix and is deferred to the concrete follow-up issue "Release signing: key.properties + keystore for make build-android" (owner: yudame, linked to #13).
+- **CONCERN 3 (toolchain decision (a))** — CLOSED. Open Question 1 (line 289) resolves to decision (a); Task 3 (line 251) captures the concrete generated AGP / Gradle wrapper / compileSdk / minSdk versions in the completion note, making the committed toolchain explicit rather than emergent.
+- **NIT (applicationId substring match)** — CLOSED. Success Criteria (line 183), Verification (line 272), and Task 3 (line 250) state the applicationId is `com.example.flutter_template`, accepted as a substring match (contains `flutter_template`), not literal equality.
