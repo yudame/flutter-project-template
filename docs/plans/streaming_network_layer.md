@@ -7,7 +7,7 @@ created: 2026-08-19
 tracking: https://github.com/yudame/flutter-project-template/issues/14
 last_comment_id:
 revision_applied: true
-revision_applied_at: 2026-08-19T17:55:00Z
+revision_applied_at: 2026-08-20T09:54:35Z
 ---
 
 # Plan: Streaming Network Layer (SSE) for AI/Chat Features
@@ -44,7 +44,7 @@ Verified against `main` at revision pass time (2026-08-19):
 
 No external findings needed beyond Dio's documented behavior, which the critique already surfaced and which we encode directly:
 
-- Dio `Options(receiveTimeout: null)` disables the per-request receive timeout inherited from `BaseOptions`; this is the documented way to allow long-lived streams where tokens arrive sparsely. (`dio` package docs)
+- In Dio 5.x, `compose()` merges per-request options with `receiveTimeout ?? baseOpt.receiveTimeout`, so `receiveTimeout: null` silently falls back to the base 30s and a sparse stream (>30s between tokens) still throws `DioException.receiveTimeout`. Only `receiveTimeout: Duration.zero` works: `response_stream_handler.dart` short-circuits the receive-timeout timer when `receiveTimeout <= Duration.zero` (`if (receiveTimeout <= Duration.zero) return;`), so a long-lived stream with sparse tokens survives. This is the verified BLOCKER mechanism we encode. (`dio` 5.11.0 source)
 - `ResponseType.stream` on a Dio `Options` returns the raw bytes; the caller decodes. Streaming is available on the existing Dio instance — no new HTTP dependency is required.
 - SSE backends commonly buffer unless the client sends `Accept: text/event-stream`; and `text/event-stream` must override the template's default `Accept: application/json` per request.
 
@@ -58,7 +58,7 @@ Add a streaming capability to the network core that composes with the existing `
 1. **Dio's `ResponseType.stream` is the base** — no new HTTP client dependency. The existing, already-configured `DioClient` instance is reused (it exposes `Dio get dio`); a fresh Dio is **not** constructed, so baseUrl, `AuthInterceptor`, and logging are preserved.
 2. **A `StreamingClient` abstraction** — a thin wrapper over the injected `DioClient` that returns a `Stream<Result<String>>` of decoded tokens for a request. Keeps the network layer testable and swappable via a mock Dio adapter.
 3. **SSE framing handled in one place** — `sse_parser.dart` parses raw stream chunks into SSE events (`data:`, `event:`, `id:`) and yields clean payload strings. This is the part most chat/AI backends emit.
-4. **Per-request options override the global defaults** — every streaming request builds `Options(receiveTimeout: null, headers: {'Accept': 'text/event-stream'}, responseType: ResponseType.stream)` and merges over the base options, so the global 30s receiveTimeout and `Accept: application/json` are overridden. This is the BLOCKER fix.
+4. **Per-request options override the global defaults** — every streaming request builds `Options(receiveTimeout: Duration.zero, headers: {'Accept': 'text/event-stream'}, responseType: ResponseType.stream)` and merges over the base options, so the global 30s receiveTimeout and `Accept: application/json` are overridden. This is the BLOCKER fix.
 5. **Connectivity is read at stream start, not queued** — a token stream cannot be replayed by the Hive-backed `OfflineQueue`. When offline (or poor), `StreamingClient` emits `Result.failure` immediately and does **not** enqueue; a `CancelToken` is cancelled so no orphaned stream lingers. Streaming does not attempt cached replay — that is explicitly deferred.
 6. **Worked example** — a `features/chat/` reference feature (mirroring `features/home/`) that streams tokens into a UI, so teams have a copy-paste starting point. This is the first consumer: the kids' chat app in `counsell-home/apps/chat`.
 
@@ -95,7 +95,7 @@ Document the streaming pattern: when to use it, how to wire `StreamingClient`, h
 
 Embedded from the critique (all findings are resolved here and reflected in the Steps below):
 
-- **B-1 (BLOCKER: timeout + Accept).** Every streaming request MUST build `Options(receiveTimeout: null, headers: {'Accept': 'text/event-stream'}, responseType: ResponseType.stream)` and merge it over the base options so the global 30s `receiveTimeout` and `Accept: application/json` are overridden. Test: a mock adapter delivering tokens >30s apart does **not** throw `DioException.receiveTimeout`; and the request's `Accept` header equals `text/event-stream`.
+- **B-1 (BLOCKER: timeout + Accept).** Every streaming request MUST build `Options(receiveTimeout: Duration.zero, headers: {'Accept': 'text/event-stream'}, responseType: ResponseType.stream)` and merge it over the base options so the global 30s `receiveTimeout` and `Accept: application/json` are overridden. Test: a mock adapter delivering tokens >30s apart does **not** throw `DioException.receiveTimeout`; and the request's `Accept` header equals `text/event-stream`.
 - **C-1 (emission contract).** Pin the contract in `streaming_client.dart` doc-comment and enforce with tests: emit `Result.loading()` once as the leading item; then one `Result.success(token)` per token; surface `[DONE]` as a distinct terminal event that ends the stream normally (it is **not** emitted as a token); a mid-stream `DioException`/disconnect is converted into a terminal `Result.failure(message, err)` (via `StreamController.addError` or a terminal `add`) — never left hanging. ChatBloc test: an aborted mid-stream does **not** leave a half-accumulated message marked success.
 - **C-2 (max-token bound + CancelToken).** Accumulate with a guard in the reducer: `if (message.length >= kMaxMessageChars) { cancelToken?.cancel(); }`. `StreamingClient.stream` exposes `{CancelToken? cancelToken}`; the UI stop action calls `cancel()`. ChatBloc test asserts accumulation halts and the stream closes at the bound.
 - **C-3 (reuse existing DioClient).** `StreamingClient` receives the existing `DioClient` (its `dio` getter) and calls `ResponseType.stream` on that instance — NOT a fresh Dio — preserving baseUrl, `AuthInterceptor`, and logging. Mock-Dio-adapter unit tests verify the configured Dio is used.
@@ -117,7 +117,7 @@ Embedded from the critique (all findings are resolved here and reflected in the 
 **Verification:**
 - `flutter test` passes; specifically:
   - `sse_parser` unit tests (multi-line `data:`, `[DONE]`, comments, `event:`/`id:`).
-  - `StreamingClient` mock-adapter tests: `Accept: text/event-stream` + `receiveTimeout: null` override (B-1); tokens >30s apart don't throw (B-1); offline/poor → immediate `Result.failure`, nothing enqueued (C-4); loading-leading + terminal-failure contract (C-1).
+  - `StreamingClient` mock-adapter tests: `Accept: text/event-stream` + `receiveTimeout: Duration.zero` override (B-1); tokens >30s apart don't throw (B-1); offline/poor → immediate `Result.failure`, nothing enqueued (C-4); loading-leading + terminal-failure contract (C-1).
   - `ChatBloc` tests: tokens accumulate across events into the rendered message **before** completion (N-1); mid-stream abort does not mark a half-accumulated message success (C-1); max-length bound halts accumulation and closes the stream (C-2).
 - `flutter analyze` passes (no new lint errors).
 - Manual smoke: `flutter run -d chrome` on `features/chat/` shows text appearing incrementally.
@@ -141,14 +141,14 @@ Embedded from the critique (all findings are resolved here and reflected in the 
 ## Testing
 
 - Unit tests for `sse_parser.dart` against sample SSE payloads (multi-line `data:`, `[DONE]` sentinel, comments, event types).
-- Unit tests for `StreamingClient` using a mock Dio adapter: request options override (`Accept: text/event-stream`, `receiveTimeout: null`, `ResponseType.stream`), tokens >30s apart don't abort, offline/poor → immediate `Result.failure` with nothing enqueued, and the emission contract (loading-first, terminal failure on mid-stream error, `[DONE]` not emitted as a token).
+- Unit tests for `StreamingClient` using a mock Dio adapter: request options override (`Accept: text/event-stream`, `receiveTimeout: Duration.zero`, `ResponseType.stream`), tokens >30s apart don't abort, offline/poor → immediate `Result.failure` with nothing enqueued, and the emission contract (loading-first, terminal failure on mid-stream error, `[DONE]` not emitted as a token).
 - A `ChatBloc` test suite: tokens accumulate across events into the rendered message before completion; an aborted mid-stream does not leave a half-accumulated message marked success; accumulation halts and the stream closes at `kMaxMessageChars`; stop action cancels the `CancelToken`.
 - `flutter test` passes; `flutter analyze` passes.
 
 ## Acceptance Criteria
 
 - [ ] A `StreamingClient` exists in `lib/core/network/` and exposes a `Stream<Result<String>>`, constructed from the existing `DioClient` (reusing baseUrl/auth/logging — no fresh Dio).
-- [ ] Every streaming request overrides the global `receiveTimeout: 30s` and `Accept: application/json` with `receiveTimeout: null` and `Accept: text/event-stream` (BLOCKER resolved); a mock adapter delivering tokens >30s apart does not throw.
+- [ ] Every streaming request overrides the global `receiveTimeout: 30s` and `Accept: application/json` with `receiveTimeout: Duration.zero` and `Accept: text/event-stream` (BLOCKER resolved); a mock adapter delivering tokens >30s apart does not throw.
 - [ ] SSE framing is parsed in one place (`sse_parser.dart`) and unit-tested.
 - [ ] A `features/chat/` reference feature streams tokens into a UI, bounded by a max-length guard with a working `CancelToken` stop action.
 - [ ] **User-visible (incremental render):** in `features/chat/`, text appears incrementally before the full response completes (tokens emitted across multiple stream events show in the rendered message before completion).
@@ -166,7 +166,7 @@ Resolved in this revision — see **Implementation Notes** for the full resoluti
 
 | Severity | Critic | Finding | Addressed By | Implementation Note |
 |----------|--------|---------|--------------|---------------------|
-| BLOCKER | Risk & Robustness | Global Dio `receiveTimeout: 30s` + `Accept: application/json` aborts/forces buffering of long SSE streams. | Approach #4; `streaming_client.dart`; Acceptance; Test B-1 | **B-1** — per-request `Options(receiveTimeout: null, Accept: text/event-stream, ResponseType.stream)` merged over base options; test delivers tokens >30s apart without `receiveTimeout`. |
+| BLOCKER | Risk & Robustness | Global Dio `receiveTimeout: 30s` + `Accept: application/json` aborts/forces buffering of long SSE streams. | Approach #4; `streaming_client.dart`; Acceptance; Test B-1 | **B-1** — per-request `Options(receiveTimeout: Duration.zero, Accept: text/event-stream, ResponseType.stream)` merged over base options; test delivers tokens >30s apart without `receiveTimeout`. |
 | CONCERN | Risk & Robustness / History & Consistency | `Stream<Result<String>>` emission contract unspecified (loading-first? mid-stream error? `[DONE]`?). | Approach #2; `streaming_client.dart`; C-1 test | **C-1** — loading-first, terminal failure on mid-stream error, `[DONE]` not emitted as a token; ChatBloc abort test. |
 | CONCERN | Risk & Robustness | No max-token bound / `CancelToken` abort; runaway stream grows memory unbounded. | Files #3; `features/chat/` | **C-2** — `kMaxMessageChars` guard cancels; `CancelToken` exposed + stop action; bloc halting test. |
 | CONCERN | History & Consistency | `StreamingClient` must reuse existing `DioClient` (baseUrl/auth), not a fresh Dio. | Files #1; Approach #2 | **C-3** — inject `DioClient`, use its `dio`; mock-adapter test proves reuse. |
