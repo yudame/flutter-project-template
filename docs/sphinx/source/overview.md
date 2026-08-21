@@ -2,7 +2,7 @@
 
 ## What Is This?
 
-This is a **documentation-only Flutter architecture template** for small teams (2-5 people) using AI-assisted development. It contains no source code — only architecture guides and setup documentation to copy into new Flutter projects.
+This is a **source-bearing Flutter architecture template** for small teams (2-5 people) using AI-assisted development. It ships a real, runnable app under `lib/` alongside the architecture guides and setup documentation — use it as the starting point to copy into new Flutter projects.
 
 ## Who Is It For?
 
@@ -33,27 +33,24 @@ This is a **documentation-only Flutter architecture template** for small teams (
 | [Architecture](architecture.md) | Reference guidelines + planned features (database layer) |
 | [Setup Reference](setup_reference.md) | Critical implementation details, auth flows, retry logic, pitfalls |
 
-## Project Structure (When Implemented)
+## Project Structure
 
 ```
 lib/
+├── main.dart              # App entry point
+├── l10n/                  # Localization (app_en.arb, app_es.arb)
 ├── core/
-│   ├── theme/              # App theme
-│   ├── routes/             # go_router setup
-│   ├── network/            # DioClient, offline queue
-│   ├── database/           # DatabaseService, StorageService
-│   ├── connectivity/       # ConnectivityBloc & service
-│   ├── di/                 # get_it configuration
-│   └── utils/              # Logger, constants, extensions
+│   ├── theme/             # AppTheme
+│   ├── routes/            # go_router setup + auth_guard
+│   ├── network/           # DioClient, offline queue, request executor, auth token manager + interceptor
+│   ├── database/          # DatabaseService (interface), LocalCacheService, sync status, cached document
+│   ├── connectivity/      # ConnectivityBloc & service
+│   ├── auth/              # OPTIONAL auth layer (AuthRepository, AuthBloc) — see Optional Authentication
+│   ├── analytics/         # AnalyticsService + NoopAnalyticsService (default)
+│   ├── di/                # get_it configuration
+│   └── utils/             # Result type, connectivity-aware mixin
 ├── features/
-│   └── [feature_name]/
-│       ├── data/
-│       │   ├── models/     # Freezed models
-│       │   ├── repositories/
-│       │   └── datasources/
-│       └── presentation/
-│           ├── bloc/       # BLoC + Freezed events/states
-│           ├── pages/
-│           └── widgets/
+│   └── home/              # Example feature (data + presentation + BLoC)
 └── shared/
+    └── widgets/           # Reusable widgets (error view, connectivity banner, loading, empty state)
 ```

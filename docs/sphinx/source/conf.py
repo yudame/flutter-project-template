@@ -31,6 +31,12 @@ myst_enable_extensions = [
 
 myst_heading_anchors = 3
 
+# The docs/ markdown files are copied into the sphinx source dir at build time,
+# so relative links back to the repo-root CLAUDE.md (e.g. ../CLAUDE.md#anchor)
+# resolve correctly on GitHub but not from sphinx/source. Suppress the resulting
+# myst.xref_missing warning; these links fall back to plain hyperlinks.
+suppress_warnings = ['myst.xref_missing']
+
 # Source file suffixes
 source_suffix = {
     '.rst': 'restructuredtext',

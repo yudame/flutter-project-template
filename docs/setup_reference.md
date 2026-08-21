@@ -691,6 +691,55 @@ class MockConnectivityService extends Mock implements ConnectivityService {}
 
 ---
 
+## 9. Network Security Config for LAN Apps (Cleartext)
+
+### Problem
+
+Android 9 (API 28+) blocks cleartext (plain HTTP) traffic by default. A LAN app that talks to a local host over HTTP (e.g. `http://192.168.1.50:8080` on the home network) fails with `CLEARTEXT communication to [ip] not permitted by network security policy`.
+
+### Pattern: base-config (simplest, for LAN apps)
+
+For a LAN app with unpredictable host IPs (Android's `domain-config` cannot wildcard or CIDR-match a subnet), set cleartext permitted globally via `base-config`. Create `android/app/src/main/res/xml/network_security_config.xml`:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
+```
+
+Then wire it in `android/app/src/main/AndroidManifest.xml` on the `<application>` tag:
+
+```xml
+<application
+    android:networkSecurityConfig="@xml/network_security_config">
+    <!-- remaining manifest attributes omitted -->
+</application>
+```
+
+Setting `android:networkSecurityConfig` makes `android:usesCleartextTraffic` ignored, so keep the config in the XML file. Note: API 37+ has an implicit localhost cleartext config; API 28-36 must configure localhost explicitly if your LAN app also talks to `localhost`/`127.0.0.1`.
+
+### Alternative: per-domain `domain-config` (known hosts only)
+
+If your LAN host IPs are stable, restrict cleartext to specific hosts instead of globally:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">192.168.1.50</domain>
+    </domain-config>
+</network-security-config>
+```
+
+The most-specific matching `domain-config` wins. You cannot CIDR-match a subnet — list each host explicitly.
+
+### Security Tradeoff
+
+`base-config cleartextTrafficPermitted="true"` permits cleartext to **all** hosts, weakening transport security app-wide. Use it only for LAN-only apps (no internet credentials over cleartext), and prefer the per-domain `domain-config` variant whenever hosts are known and stable. Never ship the global cleartext config to a production app that talks to the public internet.
+
+---
+
 ## Summary of Critical Decisions
 
 | Issue | Decision | Rationale |

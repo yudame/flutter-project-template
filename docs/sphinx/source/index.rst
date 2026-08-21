@@ -1,7 +1,7 @@
 Flutter Project Template
 ========================
 
-A documentation-only Flutter architecture template for small teams (2-5 people) using AI-assisted development. No source code — just battle-tested architecture guides and patterns to copy into new Flutter projects.
+A source-bearing Flutter architecture template for small teams (2-5 people) using AI-assisted development. Ships a real, runnable app under `lib/` — use it as the starting point to copy into new Flutter projects.
 
 .. toctree::
    :maxdepth: 2
