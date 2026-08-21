@@ -5,12 +5,6 @@ import 'auth_exception.dart';
 import 'auth_token_manager.dart';
 
 class AuthInterceptor extends Interceptor {
-  final AuthTokenManager _tokenManager;
-  final Dio _dio;
-  final Logger _logger;
-
-  bool _isRefreshing = false;
-
   AuthInterceptor({
     required AuthTokenManager tokenManager,
     required Dio dio,
@@ -18,6 +12,11 @@ class AuthInterceptor extends Interceptor {
   })  : _tokenManager = tokenManager,
         _dio = dio,
         _logger = logger;
+  final AuthTokenManager _tokenManager;
+  final Dio _dio;
+  final Logger _logger;
+
+  bool _isRefreshing = false;
 
   @override
   Future<void> onRequest(

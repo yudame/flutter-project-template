@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 
 /// A centered loading indicator widget.
 class LoadingIndicator extends StatelessWidget {
-  final String? message;
-  final double size;
-
   const LoadingIndicator({
     super.key,
     this.message,
     this.size = 36,
   });
+  final String? message;
+  final double size;
 
   @override
   Widget build(BuildContext context) {

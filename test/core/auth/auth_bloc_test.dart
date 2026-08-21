@@ -89,16 +89,20 @@ void main() {
       blocTest<AuthBloc, AuthState>(
         'emits [loading, authenticated] when login succeeds',
         build: () {
-          when(() => mockAuthRepository.signInWithEmail(
-                email: any(named: 'email'),
-                password: any(named: 'password'),
-              )).thenAnswer((_) async => const Result.success(testUser));
+          when(
+            () => mockAuthRepository.signInWithEmail(
+              email: any(named: 'email'),
+              password: any(named: 'password'),
+            ),
+          ).thenAnswer((_) async => const Result.success(testUser));
           return AuthBloc(authRepository: mockAuthRepository);
         },
-        act: (bloc) => bloc.add(const AuthEvent.loginRequested(
-          email: 'test@example.com',
-          password: 'password123',
-        )),
+        act: (bloc) => bloc.add(
+          const AuthEvent.loginRequested(
+            email: 'test@example.com',
+            password: 'password123',
+          ),
+        ),
         expect: () => [
           const AuthState.loading(),
           const AuthState.authenticated(testUser),
@@ -108,17 +112,22 @@ void main() {
       blocTest<AuthBloc, AuthState>(
         'emits [loading, error] when login fails',
         build: () {
-          when(() => mockAuthRepository.signInWithEmail(
-                email: any(named: 'email'),
-                password: any(named: 'password'),
-              )).thenAnswer(
-              (_) async => const Result.failure('Invalid credentials'));
+          when(
+            () => mockAuthRepository.signInWithEmail(
+              email: any(named: 'email'),
+              password: any(named: 'password'),
+            ),
+          ).thenAnswer(
+            (_) async => const Result.failure('Invalid credentials'),
+          );
           return AuthBloc(authRepository: mockAuthRepository);
         },
-        act: (bloc) => bloc.add(const AuthEvent.loginRequested(
-          email: 'test@example.com',
-          password: 'wrongpassword',
-        )),
+        act: (bloc) => bloc.add(
+          const AuthEvent.loginRequested(
+            email: 'test@example.com',
+            password: 'wrongpassword',
+          ),
+        ),
         expect: () => [
           const AuthState.loading(),
           const AuthState.error('Invalid credentials'),
@@ -130,18 +139,22 @@ void main() {
       blocTest<AuthBloc, AuthState>(
         'emits [loading, authenticated] when signup succeeds',
         build: () {
-          when(() => mockAuthRepository.signUpWithEmail(
-                email: any(named: 'email'),
-                password: any(named: 'password'),
-                displayName: any(named: 'displayName'),
-              )).thenAnswer((_) async => const Result.success(testUser));
+          when(
+            () => mockAuthRepository.signUpWithEmail(
+              email: any(named: 'email'),
+              password: any(named: 'password'),
+              displayName: any(named: 'displayName'),
+            ),
+          ).thenAnswer((_) async => const Result.success(testUser));
           return AuthBloc(authRepository: mockAuthRepository);
         },
-        act: (bloc) => bloc.add(const AuthEvent.signUpRequested(
-          email: 'test@example.com',
-          password: 'password123',
-          displayName: 'Test User',
-        )),
+        act: (bloc) => bloc.add(
+          const AuthEvent.signUpRequested(
+            email: 'test@example.com',
+            password: 'password123',
+            displayName: 'Test User',
+          ),
+        ),
         expect: () => [
           const AuthState.loading(),
           const AuthState.authenticated(testUser),
@@ -151,18 +164,23 @@ void main() {
       blocTest<AuthBloc, AuthState>(
         'emits [loading, error] when signup fails',
         build: () {
-          when(() => mockAuthRepository.signUpWithEmail(
-                email: any(named: 'email'),
-                password: any(named: 'password'),
-                displayName: any(named: 'displayName'),
-              )).thenAnswer(
-              (_) async => const Result.failure('Email already in use'));
+          when(
+            () => mockAuthRepository.signUpWithEmail(
+              email: any(named: 'email'),
+              password: any(named: 'password'),
+              displayName: any(named: 'displayName'),
+            ),
+          ).thenAnswer(
+            (_) async => const Result.failure('Email already in use'),
+          );
           return AuthBloc(authRepository: mockAuthRepository);
         },
-        act: (bloc) => bloc.add(const AuthEvent.signUpRequested(
-          email: 'existing@example.com',
-          password: 'password123',
-        )),
+        act: (bloc) => bloc.add(
+          const AuthEvent.signUpRequested(
+            email: 'existing@example.com',
+            password: 'password123',
+          ),
+        ),
         expect: () => [
           const AuthState.loading(),
           const AuthState.error('Email already in use'),
@@ -190,7 +208,8 @@ void main() {
         'emits [loading, error] when OAuth fails',
         build: () {
           when(() => mockAuthRepository.signInWithOAuth(OAuthProvider.google))
-              .thenAnswer((_) async => const Result.failure('Sign in cancelled'));
+              .thenAnswer(
+                  (_) async => const Result.failure('Sign in cancelled'));
           return AuthBloc(authRepository: mockAuthRepository);
         },
         act: (bloc) =>

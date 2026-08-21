@@ -15,7 +15,6 @@ class AppTheme {
       brightness: Brightness.light,
       colorScheme: ColorScheme.fromSeed(
         seedColor: _primaryColor,
-        brightness: Brightness.light,
         secondary: _secondaryColor,
         error: _errorColor,
       ),

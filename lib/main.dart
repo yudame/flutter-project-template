@@ -7,8 +7,8 @@ import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
-import 'core/di/injection.dart';
 import 'core/connectivity/connectivity_bloc.dart';
+import 'core/di/injection.dart';
 import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'l10n/generated/app_localizations.dart';
@@ -62,7 +62,6 @@ class FlutterTemplateApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
-        themeMode: ThemeMode.system,
         routerConfig: appRouter,
         // Localization
         localizationsDelegates: const [

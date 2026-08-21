@@ -8,12 +8,6 @@ enum RequestType {
 
 /// Represents a queued request for offline execution.
 class QueuedRequest {
-  final String id;
-  final RequestType type;
-  final Map<String, dynamic> params;
-  final DateTime queuedAt;
-  final int retryCount;
-
   const QueuedRequest({
     required this.id,
     required this.type,
@@ -21,6 +15,22 @@ class QueuedRequest {
     required this.queuedAt,
     this.retryCount = 0,
   });
+
+  /// Create from JSON.
+  factory QueuedRequest.fromJson(Map<String, dynamic> json) {
+    return QueuedRequest(
+      id: json['id'] as String,
+      type: RequestType.values.byName(json['type'] as String),
+      params: Map<String, dynamic>.from(json['params'] as Map),
+      queuedAt: DateTime.parse(json['queuedAt'] as String),
+      retryCount: json['retryCount'] as int? ?? 0,
+    );
+  }
+  final String id;
+  final RequestType type;
+  final Map<String, dynamic> params;
+  final DateTime queuedAt;
+  final int retryCount;
 
   QueuedRequest copyWith({
     String? id,
@@ -46,15 +56,4 @@ class QueuedRequest {
         'queuedAt': queuedAt.toIso8601String(),
         'retryCount': retryCount,
       };
-
-  /// Create from JSON.
-  factory QueuedRequest.fromJson(Map<String, dynamic> json) {
-    return QueuedRequest(
-      id: json['id'] as String,
-      type: RequestType.values.byName(json['type'] as String),
-      params: Map<String, dynamic>.from(json['params'] as Map),
-      queuedAt: DateTime.parse(json['queuedAt'] as String),
-      retryCount: json['retryCount'] as int? ?? 0,
-    );
-  }
 }

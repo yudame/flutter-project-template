@@ -114,9 +114,9 @@ void main() {
 
         await cache.putAll('items', docs);
 
-        final captured =
-            verify(() => mockBox.putAll(captureAny())).captured.single
-                as Map<dynamic, dynamic>;
+        final captured = verify(() => mockBox.putAll(captureAny()))
+            .captured
+            .single as Map<dynamic, dynamic>;
         expect(captured.length, equals(2));
         expect(jsonDecode(captured['1'] as String), equals(docs['1']));
         expect(jsonDecode(captured['2'] as String), equals(docs['2']));

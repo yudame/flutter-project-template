@@ -17,7 +17,8 @@ void main() {
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
     });
 
-    testWidgets('displays retry button when onRetry is provided', (tester) async {
+    testWidgets('displays retry button when onRetry is provided',
+        (tester) async {
       var retryPressed = false;
 
       await tester.pumpWidget(

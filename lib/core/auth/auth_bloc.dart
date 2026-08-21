@@ -37,9 +37,6 @@ import 'auth_state.dart';
 /// )
 /// ```
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final AuthRepository _authRepository;
-  StreamSubscription<AuthUser?>? _authSubscription;
-
   AuthBloc({required AuthRepository authRepository})
       : _authRepository = authRepository,
         super(const AuthState.initial()) {
@@ -55,6 +52,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (user) => add(AuthEvent.userChanged(user)),
     );
   }
+  final AuthRepository _authRepository;
+  StreamSubscription<AuthUser?>? _authSubscription;
 
   Future<void> _onCheckRequested(
     AuthCheckRequested event,

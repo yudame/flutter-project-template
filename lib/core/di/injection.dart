@@ -6,17 +6,17 @@ import 'package:hive/hive.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../features/home/data/repositories/item_repository.dart';
+import '../../features/home/presentation/bloc/home_bloc.dart';
 import '../analytics/analytics_service.dart';
 import '../analytics/noop_analytics_service.dart';
-import '../database/local_cache_service.dart';
 import '../connectivity/connectivity_bloc.dart';
 import '../connectivity/connectivity_service.dart';
+import '../database/local_cache_service.dart';
 import '../network/auth_token_manager.dart';
 import '../network/dio_client.dart';
 import '../network/offline_queue.dart';
 import '../network/request_executor.dart';
-import '../../features/home/data/repositories/item_repository.dart';
-import '../../features/home/presentation/bloc/home_bloc.dart';
 
 final getIt = GetIt.instance;
 
@@ -38,18 +38,16 @@ Future<void> configureDependencies() async {
         methodCount: 0,
         errorMethodCount: 5,
         lineLength: 80,
-        colors: true,
-        printEmojis: true,
       ),
     ),
   );
 
   getIt.registerLazySingleton<HiveInterface>(() => Hive);
-  getIt.registerLazySingleton<Connectivity>(() => Connectivity());
+  getIt.registerLazySingleton<Connectivity>(Connectivity.new);
 
   // Analytics (use NoopAnalyticsService by default, replace with Firebase in production)
   getIt.registerLazySingleton<AnalyticsService>(
-    () => NoopAnalyticsService(),
+    NoopAnalyticsService.new,
   );
 
   // Database (local cache — register concrete DatabaseService when choosing a provider)
@@ -71,7 +69,7 @@ Future<void> configureDependencies() async {
   );
 
   // Network
-  getIt.registerLazySingleton<Dio>(() => Dio());
+  getIt.registerLazySingleton<Dio>(Dio.new);
 
   getIt.registerLazySingleton<DioClient>(
     () => DioClient(

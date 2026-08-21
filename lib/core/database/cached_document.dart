@@ -20,6 +20,14 @@ import 'sync_status.dart';
 /// );
 /// ```
 class CachedDocument {
+  const CachedDocument({
+    required this.id,
+    required this.data,
+    required this.cachedAt,
+    this.syncStatus = const SyncStatus.synced(),
+    this.syncedAt,
+  });
+
   /// The document ID.
   final String id;
 
@@ -35,14 +43,6 @@ class CachedDocument {
   /// When this document was last successfully synced with remote.
   /// Null if never synced.
   final DateTime? syncedAt;
-
-  const CachedDocument({
-    required this.id,
-    required this.data,
-    this.syncStatus = const SyncStatus.synced(),
-    required this.cachedAt,
-    this.syncedAt,
-  });
 
   /// Create a copy with updated fields.
   CachedDocument copyWith({

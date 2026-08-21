@@ -33,12 +33,11 @@ import '../utils/result.dart';
 ///
 /// See `docs/database.md` for full offline-first patterns.
 class LocalCacheService {
-  final HiveInterface _hive;
-
   /// Creates a [LocalCacheService] backed by the given [HiveInterface].
   ///
   /// If [hive] is null, uses the global [Hive] instance.
   LocalCacheService({HiveInterface? hive}) : _hive = hive ?? Hive;
+  final HiveInterface _hive;
 
   /// Get a cached document by collection and ID.
   ///
