@@ -11,10 +11,11 @@ This file documents the patterns and code that are already implemented in the `l
 1. [Core Patterns](#core-patterns)
 2. [Dependency Injection](#dependency-injection)
 3. [Network Layer](#network-layer)
-4. [Connectivity Strategy](#connectivity-strategy)
-5. [Offline Queue](#offline-queue)
-6. [BLoC Patterns](#bloc-patterns)
-7. [Testing Strategy](#testing-strategy)
+4. [Streaming (SSE) Network Layer](#streaming-sse-network-layer)
+5. [Connectivity Strategy](#connectivity-strategy)
+6. [Offline Queue](#offline-queue)
+7. [BLoC Patterns](#bloc-patterns)
+8. [Testing Strategy](#testing-strategy)
 
 ---
 
@@ -275,6 +276,111 @@ class AuthInterceptor extends Interceptor {
   }
 }
 ```
+
+---
+
+## Streaming (SSE) Network Layer
+
+**Location:** `lib/core/network/streaming_client.dart`, `lib/core/network/sse_parser.dart`
+
+The request/response path waits for a full HTTP body. Streaming is different: AI/chat
+backends emit tokens over a Server-Sent Events (SSE) stream, and we want to render
+text incrementally instead of blocking on the whole response. The template ships a
+small, reusable streaming layer that composes with the existing `Result<T>` and
+connectivity-first patterns.
+
+### When to use it
+
+Use `StreamingClient` whenever a response is delivered incrementally as tokens
+(SSE from an AI/chat proxy). Do **not** use it for ordinary JSON request/response —
+that stays on `DioClient`/`ItemRepository` so the offline queue and cache apply.
+
+### `StreamingClient` — how to wire it
+
+```dart
+// Registered in `lib/core/di/injection.dart`:
+getIt.registerLazySingleton<StreamingClient>(
+  () => StreamingClient(
+    dioClient: getIt<DioClient>(),
+    connectivity: getIt<ConnectivityService>(),
+    logger: getIt<Logger>(),
+  ),
+);
+
+final client = getIt<StreamingClient>();
+final cancelToken = CancelToken();
+
+final stream = client.stream(
+  '/chat',
+  queryParameters: {'q': 'hello'},
+  cancelToken: cancelToken,
+);
+```
+
+`StreamingClient` deliberately reuses the injected `DioClient` (its configured `Dio`)
+so `baseUrl`, the `AuthInterceptor`, and debug logging are preserved. Every streaming
+request overrides the global defaults:
+
+```dart
+final options = Options(
+  responseType: ResponseType.stream,
+  receiveTimeout: Duration.zero,          // do NOT use null — that falls back to 30s
+  sendTimeout: Duration.zero,
+  headers: {'Accept': 'text/event-stream'},
+);
+```
+
+The two overrides are load-bearing:
+
+- **`receiveTimeout: Duration.zero`** disables Dio's receive-timeout timer so a sparse,
+  long-lived stream (tokens arriving >30s apart) is not aborted. `null` would silently
+  fall back to the base 30s timeout in Dio 5.x and break streaming.
+- **`Accept: text/event-stream`** stops SSE backends from buffering the full body and
+  overrides the template default `Accept: application/json`.
+
+### `sse_parser.dart` — framing SSE into events
+
+The parser turns a raw byte/text stream into typed `SseEvent`s (data / done / error),
+handling multi-line `data:` fields, the `[DONE]` sentinel, `event:` / `id:` fields,
+comment lines, and CRLF normalization. Bytes are decoded with `utf8.decoder.bind` so a
+multi-byte character split across chunk boundaries is decoded correctly.
+
+```dart
+Stream<SseEvent> events = parseSseBytes(responseBodyStream);
+```
+
+### Emission contract
+
+`StreamingClient.stream` returns a `Stream<Result<String>>` that is **always
+well-terminated** — it never leaves a consumer hanging:
+
+1. `Result.loading()` is emitted exactly once as the leading item.
+2. One `Result.success(token)` per SSE `data:` payload.
+3. The `[DONE]` sentinel ends the stream normally and is **not** emitted as a token.
+4. A mid-stream error / disconnect / cancellation is converted into a terminal
+   `Result.failure(message, err)` before the stream closes.
+
+### Connectivity composition
+
+A token stream cannot be replayed by the Hive-backed `OfflineQueue` (it only replays
+request/response pairs). So when connectivity is offline or poor, `StreamingClient`
+emits `Result.failure` immediately and **does not enqueue** anything; no cached replay
+of streams is attempted (deferred). A `CancelToken` is cancelled so no orphaned stream
+lingers.
+
+### Reference feature: `features/chat/`
+
+`lib/features/chat/` is a copy-paste starting point mirroring `features/home/`:
+
+- `data/repositories/chat_repository.dart` — wraps `StreamingClient.stream`.
+- `presentation/bloc/chat_bloc.dart` — accumulates tokens into a message, bounded by
+  `kMaxMessageChars`, with a `stop` action wired to the `CancelToken`. An aborted
+  mid-stream becomes `ChatState.stopped` (partial text), never a success.
+- `presentation/pages/chat_page.dart` + `widgets/chat_stream_view.dart` — render the
+  accumulating text so it appears incrementally before the full response completes.
+
+The block accumulation guard (`if (message.length >= kMaxMessageChars) cancel();`)
+bounds memory, and `CancelToken` gives the user a real stop control.
 
 ---
 

@@ -6,6 +6,8 @@ import 'package:hive/hive.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../features/chat/data/repositories/chat_repository.dart';
+import '../../features/chat/presentation/bloc/chat_bloc.dart';
 import '../../features/home/data/repositories/item_repository.dart';
 import '../../features/home/presentation/bloc/home_bloc.dart';
 import '../analytics/analytics_service.dart';
@@ -17,6 +19,7 @@ import '../network/auth_token_manager.dart';
 import '../network/dio_client.dart';
 import '../network/offline_queue.dart';
 import '../network/request_executor.dart';
+import '../network/streaming_client.dart';
 
 final getIt = GetIt.instance;
 
@@ -107,6 +110,15 @@ Future<void> configureDependencies() async {
     ),
   );
 
+  // Streaming (SSE)
+  getIt.registerLazySingleton<StreamingClient>(
+    () => StreamingClient(
+      dioClient: getIt<DioClient>(),
+      connectivity: getIt<ConnectivityService>(),
+      logger: getIt<Logger>(),
+    ),
+  );
+
   // Repositories
   getIt.registerLazySingleton<ItemRepository>(
     () => ItemRepository(
@@ -117,10 +129,24 @@ Future<void> configureDependencies() async {
     ),
   );
 
+  getIt.registerLazySingleton<ChatRepository>(
+    () => ChatRepository(
+      streamingClient: getIt<StreamingClient>(),
+      logger: getIt<Logger>(),
+    ),
+  );
+
   // BLoCs (factories for fresh instances)
   getIt.registerFactory<HomeBloc>(
     () => HomeBloc(
       repository: getIt<ItemRepository>(),
+      connectivityBloc: getIt<ConnectivityBloc>(),
+    ),
+  );
+
+  getIt.registerFactory<ChatBloc>(
+    () => ChatBloc(
+      repository: getIt<ChatRepository>(),
       connectivityBloc: getIt<ConnectivityBloc>(),
     ),
   );
