@@ -4,18 +4,17 @@ import 'package:logger/logger.dart';
 import 'auth_exception.dart';
 
 class AuthTokenManager {
+  AuthTokenManager({
+    required FlutterSecureStorage storage,
+    required Logger logger,
+  })  : _storage = storage,
+        _logger = logger;
   final FlutterSecureStorage _storage;
   final Logger _logger;
 
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
   static const _expiryKey = 'token_expiry';
-
-  AuthTokenManager({
-    required FlutterSecureStorage storage,
-    required Logger logger,
-  })  : _storage = storage,
-        _logger = logger;
 
   Future<String?> getAccessToken() async {
     return _storage.read(key: _accessTokenKey);

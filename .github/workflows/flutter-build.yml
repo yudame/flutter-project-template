@@ -32,7 +32,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.0'
+          flutter-version: '3.44.8'
           channel: 'stable'
           cache: true
 
@@ -48,6 +48,9 @@ jobs:
 
       - name: Run code generation
         run: flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Generate localization
+        run: flutter gen-l10n
 
       - name: Build APK
         run: flutter build apk --${{ github.event.inputs.build_type || 'debug' }}

@@ -5,14 +5,13 @@ import 'dio_client.dart';
 import 'queued_request.dart';
 
 class RequestExecutor {
-  final DioClient _dioClient;
-  final AuthTokenManager _authManager;
-
   RequestExecutor({
     required DioClient dioClient,
     required AuthTokenManager authManager,
   })  : _dioClient = dioClient,
         _authManager = authManager;
+  final DioClient _dioClient;
+  final AuthTokenManager _authManager;
 
   Future<void> execute(QueuedRequest request) async {
     switch (request.type) {
@@ -55,7 +54,7 @@ class RequestExecutor {
 
   Future<String> _getValidAuthToken() async {
     if (await _authManager.isTokenExpired()) {
-      return await _authManager.refreshAccessToken();
+      return _authManager.refreshAccessToken();
     }
     return await _authManager.getAccessToken() ?? '';
   }

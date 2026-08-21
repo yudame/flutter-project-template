@@ -6,15 +6,6 @@ import 'auth_interceptor.dart';
 import 'auth_token_manager.dart';
 
 class DioClient {
-  final Dio _dio;
-  final Logger _logger;
-  final AuthTokenManager _authManager;
-
-  static const _baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'https://api.example.com',
-  );
-
   DioClient({
     required Dio dio,
     required Logger logger,
@@ -24,6 +15,14 @@ class DioClient {
         _authManager = authManager {
     _configureDio();
   }
+  final Dio _dio;
+  final Logger _logger;
+  final AuthTokenManager _authManager;
+
+  static const _baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://api.example.com',
+  );
 
   void _configureDio() {
     _dio.options = BaseOptions(
@@ -114,9 +113,8 @@ class DioClient {
 }
 
 class _LoggingInterceptor extends Interceptor {
-  final Logger _logger;
-
   _LoggingInterceptor(this._logger);
+  final Logger _logger;
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {

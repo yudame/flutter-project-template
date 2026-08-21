@@ -9,15 +9,6 @@ import '../../../../core/utils/result.dart';
 import '../models/item.dart';
 
 class ItemRepository {
-  final DioClient _dioClient;
-  final ConnectivityService _connectivity;
-  final OfflineQueue _offlineQueue;
-  final Logger _logger;
-
-  // In-memory cache for demo purposes
-  // In production, use Hive or another local database
-  final Map<String, Item> _cache = {};
-
   ItemRepository({
     required DioClient dioClient,
     required ConnectivityService connectivity,
@@ -27,6 +18,14 @@ class ItemRepository {
         _connectivity = connectivity,
         _offlineQueue = offlineQueue,
         _logger = logger;
+  final DioClient _dioClient;
+  final ConnectivityService _connectivity;
+  final OfflineQueue _offlineQueue;
+  final Logger _logger;
+
+  // In-memory cache for demo purposes
+  // In production, use Hive or another local database
+  final Map<String, Item> _cache = {};
 
   Future<Result<List<Item>>> getItems() async {
     final state = _connectivity.currentState;

@@ -10,7 +10,8 @@ import 'package:mocktail/mocktail.dart';
 
 class MockItemRepository extends Mock implements ItemRepository {}
 
-class MockConnectivityBloc extends MockBloc<ConnectivityEvent, ConnectivityState>
+class MockConnectivityBloc
+    extends MockBloc<ConnectivityEvent, ConnectivityState>
     implements ConnectivityBloc {}
 
 class FakeItem extends Fake implements Item {}
@@ -28,7 +29,7 @@ void main() {
       id: '1',
       title: 'Test Item 1',
       description: 'Description 1',
-      createdAt: DateTime(2024, 1, 1),
+      createdAt: DateTime(2024),
     ),
     Item(
       id: '2',
@@ -139,19 +140,22 @@ void main() {
             title: 'New Item',
             createdAt: DateTime.now(),
           );
-          when(() => repository.createItem(
-                title: any(named: 'title'),
-                description: any(named: 'description'),
-              )).thenAnswer((_) async => Result.success(newItem));
+          when(
+            () => repository.createItem(
+              title: any(named: 'title'),
+              description: any(named: 'description'),
+            ),
+          ).thenAnswer((_) async => Result.success(newItem));
           return bloc;
         },
         seed: () => HomeState.loaded(mockItems),
         act: (bloc) => bloc.add(const HomeEvent.createItem(title: 'New Item')),
         verify: (_) {
-          verify(() => repository.createItem(
-                title: 'New Item',
-                description: null,
-              )).called(1);
+          verify(
+            () => repository.createItem(
+              title: 'New Item',
+            ),
+          ).called(1);
         },
       );
     });
@@ -204,8 +208,7 @@ void main() {
           when(() => connectivityBloc.stream).thenAnswer(
             (_) => Stream.value(const ConnectivityState.online()),
           );
-          when(() => repository.processOfflineQueue())
-              .thenAnswer((_) async {});
+          when(() => repository.processOfflineQueue()).thenAnswer((_) async {});
           when(() => repository.getItems())
               .thenAnswer((_) async => Result.success(mockItems));
 

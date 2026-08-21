@@ -10,9 +10,8 @@ abstract class ConnectivityService {
 }
 
 class ConnectivityServiceImpl implements ConnectivityService {
-  final ConnectivityBloc _bloc;
-
   ConnectivityServiceImpl(this._bloc);
+  final ConnectivityBloc _bloc;
 
   @override
   Stream<ConnectivityState> get stream => _bloc.stream;

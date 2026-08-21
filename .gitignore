@@ -85,3 +85,6 @@ docs/sphinx/build/
 docs/sphinx/source/implemented.md
 docs/sphinx/source/architecture.md
 docs/sphinx/source/setup_reference.md
+
+# Flutter generated iOS ephemeral artifacts
+**/ios/Flutter/ephemeral/

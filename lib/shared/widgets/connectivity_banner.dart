@@ -9,12 +9,11 @@ import '../../core/connectivity/connectivity_state.dart';
 /// Shows different messages for poor connectivity and offline states.
 /// Automatically hides when online.
 class ConnectivityBanner extends StatelessWidget {
-  final Widget child;
-
   const ConnectivityBanner({
-    super.key,
     required this.child,
+    super.key,
   });
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
