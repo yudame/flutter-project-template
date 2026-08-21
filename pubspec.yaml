@@ -46,7 +46,7 @@ dependencies:
   json_annotation: ^4.9.0
 
   # Monitoring (Production)
-  sentry_flutter: ^8.11.0
+  sentry_flutter: ^9.27.0
 
 dev_dependencies:
   flutter_test:
