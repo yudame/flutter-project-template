@@ -712,8 +712,9 @@ Then wire it in `android/app/src/main/AndroidManifest.xml` on the `<application>
 
 ```xml
 <application
-    android:networkSecurityConfig="@xml/network_security_config"
-    ... >
+    android:networkSecurityConfig="@xml/network_security_config">
+    <!-- remaining manifest attributes omitted -->
+</application>
 ```
 
 Setting `android:networkSecurityConfig` makes `android:usesCleartextTraffic` ignored, so keep the config in the XML file. Note: API 37+ has an implicit localhost cleartext config; API 28-36 must configure localhost explicitly if your LAN app also talks to `localhost`/`127.0.0.1`.
