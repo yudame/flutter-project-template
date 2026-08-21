@@ -2,20 +2,19 @@ import 'package:flutter/material.dart';
 
 /// A widget that displays an empty state with an optional action button.
 class EmptyState extends StatelessWidget {
-  final String title;
-  final String? subtitle;
-  final IconData icon;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
   const EmptyState({
-    super.key,
     required this.title,
+    super.key,
     this.subtitle,
     this.icon = Icons.inbox_outlined,
     this.actionLabel,
     this.onAction,
   });
+  final String title;
+  final String? subtitle;
+  final IconData icon;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {

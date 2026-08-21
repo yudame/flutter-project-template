@@ -26,12 +26,11 @@ import 'analytics_service.dart';
 /// ),
 /// ```
 class AnalyticsRouteObserver extends RouteObserver<PageRoute<dynamic>> {
-  final AnalyticsService _analytics;
-
   /// Creates a route observer that logs screen views.
   ///
   /// [analytics] - The analytics service to use for logging.
   AnalyticsRouteObserver(this._analytics);
+  final AnalyticsService _analytics;
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {

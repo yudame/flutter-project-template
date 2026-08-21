@@ -7,8 +7,8 @@ import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/error_view.dart';
 import '../../../../shared/widgets/loading_indicator.dart';
 import '../bloc/home_bloc.dart';
-import '../widgets/item_card.dart';
 import '../widgets/add_item_dialog.dart';
+import '../widgets/item_card.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -44,7 +44,8 @@ class HomeView extends StatelessWidget {
           builder: (context, state) {
             return state.when(
               initial: () => const LoadingIndicator(),
-              loading: () => const LoadingIndicator(message: 'Loading items...'),
+              loading: () =>
+                  const LoadingIndicator(message: 'Loading items...'),
               loaded: (items) {
                 if (items.isEmpty) {
                   return EmptyState(

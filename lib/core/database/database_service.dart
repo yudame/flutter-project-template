@@ -78,6 +78,12 @@ abstract class DatabaseService {
 ///
 /// Combines a field name, operator, and value for query conditions.
 class QueryFilter {
+  const QueryFilter({
+    required this.field,
+    required this.operator,
+    required this.value,
+  });
+
   /// The document field to filter on.
   final String field;
 
@@ -86,12 +92,6 @@ class QueryFilter {
 
   /// The value to compare against.
   final dynamic value;
-
-  const QueryFilter({
-    required this.field,
-    required this.operator,
-    required this.value,
-  });
 
   @override
   String toString() => 'QueryFilter($field ${operator.name} $value)';

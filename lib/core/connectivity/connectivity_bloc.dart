@@ -7,6 +7,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'connectivity_state.dart';
 
 class ConnectivityBloc extends Bloc<ConnectivityEvent, ConnectivityState> {
+  ConnectivityBloc({
+    required Connectivity connectivity,
+    required Dio dio,
+  })  : _connectivity = connectivity,
+        _dio = dio,
+        super(const ConnectivityState.offline()) {
+    on<ConnectivityEvent>(_onEvent);
+    _initConnectivityListener();
+  }
   final Connectivity _connectivity;
   final Dio _dio;
   Timer? _pingTimer;
@@ -18,16 +27,6 @@ class ConnectivityBloc extends Bloc<ConnectivityEvent, ConnectivityState> {
 
   int _consecutiveFailures = 0;
   Duration? _lastLatency;
-
-  ConnectivityBloc({
-    required Connectivity connectivity,
-    required Dio dio,
-  })  : _connectivity = connectivity,
-        _dio = dio,
-        super(const ConnectivityState.offline()) {
-    on<ConnectivityEvent>(_onEvent);
-    _initConnectivityListener();
-  }
 
   void _initConnectivityListener() {
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(

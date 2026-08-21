@@ -14,11 +14,6 @@ part 'home_bloc.freezed.dart';
 
 class HomeBloc extends Bloc<HomeEvent, HomeState>
     with ConnectivityAwareBlocMixin {
-  final ItemRepository _repository;
-
-  @override
-  final ConnectivityBloc connectivityBloc;
-
   HomeBloc({
     required ItemRepository repository,
     required this.connectivityBloc,
@@ -38,6 +33,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState>
       );
     });
   }
+  final ItemRepository _repository;
+
+  @override
+  final ConnectivityBloc connectivityBloc;
 
   @override
   void onConnectivityChanged(ConnectivityState state) {

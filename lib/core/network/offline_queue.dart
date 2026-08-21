@@ -11,22 +11,14 @@ import 'queued_request.dart';
 import 'request_executor.dart';
 
 class QueueFullException implements Exception {
-  final String message;
   const QueueFullException([this.message = 'Offline queue is full']);
+  final String message;
 
   @override
   String toString() => 'QueueFullException: $message';
 }
 
 class OfflineQueue {
-  final HiveInterface _hive;
-  final RequestExecutor _executor;
-  final Logger _logger;
-
-  static const _boxName = 'offline_queue';
-  static const _maxQueueSize = 100;
-  static const _maxRetries = 3;
-
   OfflineQueue({
     required HiveInterface hive,
     required RequestExecutor executor,
@@ -34,6 +26,13 @@ class OfflineQueue {
   })  : _hive = hive,
         _executor = executor,
         _logger = logger;
+  final HiveInterface _hive;
+  final RequestExecutor _executor;
+  final Logger _logger;
+
+  static const _boxName = 'offline_queue';
+  static const _maxQueueSize = 100;
+  static const _maxRetries = 3;
 
   Future<void> add(RequestType type, Map<String, dynamic> params) async {
     // Generate or extract idempotency key
@@ -45,7 +44,8 @@ class OfflineQueue {
 
     // Check for existing request with same idempotency key
     final existing = box.values.any((jsonStr) {
-      final r = QueuedRequest.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
+      final r =
+          QueuedRequest.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
       return r.type == type && r.params['idempotency_key'] == idempotencyKey;
     });
 
@@ -74,7 +74,8 @@ class OfflineQueue {
   Future<void> processQueue() async {
     final box = await _hive.openBox<String>(_boxName);
     final requests = box.values
-        .map((jsonStr) => QueuedRequest.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>))
+        .map((jsonStr) =>
+            QueuedRequest.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>))
         .toList()
       ..sort((a, b) => a.queuedAt.compareTo(b.queuedAt));
 
@@ -95,7 +96,7 @@ class OfflineQueue {
   }
 
   Future<void> _executeWithRetry(QueuedRequest request) async {
-    for (int attempt = 0; attempt <= _maxRetries; attempt++) {
+    for (var attempt = 0; attempt <= _maxRetries; attempt++) {
       try {
         await _executor.execute(request);
         return;

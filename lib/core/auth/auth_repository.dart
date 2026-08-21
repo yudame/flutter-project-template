@@ -57,6 +57,14 @@ abstract class AuthRepository {
 /// Contains only the essential fields needed for auth decisions.
 /// Extend or create a separate UserProfile model for additional user data.
 class AuthUser {
+  const AuthUser({
+    required this.id,
+    required this.email,
+    this.displayName,
+    this.photoUrl,
+    this.emailVerified = false,
+  });
+
   /// Unique user identifier from the auth provider.
   final String id;
 
@@ -71,14 +79,6 @@ class AuthUser {
 
   /// Whether the user's email has been verified.
   final bool emailVerified;
-
-  const AuthUser({
-    required this.id,
-    required this.email,
-    this.displayName,
-    this.photoUrl,
-    this.emailVerified = false,
-  });
 
   @override
   String toString() => 'AuthUser(id: $id, email: $email)';
@@ -95,7 +95,8 @@ class AuthUser {
           emailVerified == other.emailVerified;
 
   @override
-  int get hashCode => Object.hash(id, email, displayName, photoUrl, emailVerified);
+  int get hashCode =>
+      Object.hash(id, email, displayName, photoUrl, emailVerified);
 }
 
 /// Supported OAuth providers.

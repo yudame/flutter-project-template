@@ -3,16 +3,15 @@ import 'package:flutter/material.dart';
 import '../../data/models/item.dart';
 
 class ItemCard extends StatelessWidget {
-  final Item item;
-  final ValueChanged<bool> onToggle;
-  final VoidCallback onDelete;
-
   const ItemCard({
-    super.key,
     required this.item,
     required this.onToggle,
     required this.onDelete,
+    super.key,
   });
+  final Item item;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {

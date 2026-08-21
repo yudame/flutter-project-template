@@ -31,7 +31,7 @@ extension ResultExtension<T> on Result<T> {
   Result<R> mapSuccess<R>(R Function(T data) mapper) {
     return when(
       success: (data) => Result.success(mapper(data)),
-      failure: (message, error) => Result.failure(message, error),
+      failure: Result.failure,
       loading: () => const Result.loading(),
     );
   }
