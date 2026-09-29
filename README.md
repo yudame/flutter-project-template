@@ -20,7 +20,7 @@ flutter pub get
 
 # Generate code (freezed, json_serializable)
 make gen
-# or: flutter pub run build_runner build --delete-conflicting-outputs
+# or: dart run build_runner build --delete-conflicting-outputs
 
 # Run
 flutter run
@@ -151,15 +151,26 @@ GoRoute(
 
 ## Creating New Features
 
-This template includes Claude commands for rapid scaffolding:
+This template includes Claude commands and specialized skills in `.claude/` for rapid scaffolding and testing:
+
+### Claude Slash Commands
 
 | Command | Description |
 |---------|-------------|
 | `/new-feature` | Scaffold complete feature module (model, repo, BLoC, page, tests) |
 | `/new-model` | Create Freezed model with JSON serialization |
-| `/new-bloc` | Create BLoC with Freezed events/states |
+| `/new-bloc` | Create BLoC with Dart 3 sealed class events/states |
 | `/new-repository` | Create connectivity-aware repository |
 | `/new-widget` | Create reusable widget |
+| `/test-chrome` | Launch, inspect, and run integration/unit tests on Google Chrome |
+| `/test-simulator` | Boot, manage, test, and deep-link iOS Simulator & Android Emulator |
+| `/run-tests` | Run full test suite (unit, BLoC, widget, integration) with coverage |
+
+### Claude Agent Skills (`.claude/skills/`)
+
+- **`flutter-test-chrome`** - Workflows for testing Flutter web in Chrome (headless, ChromeDriver, viewport simulation, console logs).
+- **`flutter-test-mobile-simulator`** - Automation for discovering, booting, installing, testing, and debugging on iOS Simulators (`xcrun simctl`) and Android Virtual Devices (`emulator`, `adb`).
+- **`flutter-build-and-test`** - Standardized build verification, static analysis, code generation, and test execution.
 
 ### Example: Adding a Profile Feature
 
@@ -168,7 +179,7 @@ This template includes Claude commands for rapid scaffolding:
 ```
 
 This creates:
-- `lib/features/profile/` with data and presentation layers
+- `lib/features/profile/` with data and presentation layers (using Dart 3 sealed classes)
 - `test/features/profile/` with BLoC and repository tests
 - All following template conventions
 
@@ -214,20 +225,20 @@ Future<Result<Data>> fetchData(String id) async {
 }
 ```
 
-### BLoC with Freezed
+### BLoC with Dart 3 Sealed Classes
 ```dart
-@freezed
-class MyEvent with _$MyEvent {
-  const factory MyEvent.load() = _Load;
-  const factory MyEvent.refresh() = _Refresh;
+sealed class MyEvent {
+  const MyEvent();
+  const factory MyEvent.load() = MyLoad;
+  const factory MyEvent.refresh() = MyRefresh;
 }
 
-@freezed
-class MyState with _$MyState {
-  const factory MyState.initial() = _Initial;
-  const factory MyState.loading() = _Loading;
-  const factory MyState.loaded(Data data) = _Loaded;
-  const factory MyState.error(String message) = _Error;
+sealed class MyState {
+  const MyState();
+  const factory MyState.initial() = MyInitial;
+  const factory MyState.loading() = MyLoading;
+  const factory MyState.loaded(Data data) = MyLoaded;
+  const factory MyState.error(String message) = MyError;
 }
 ```
 
@@ -241,27 +252,62 @@ if (_connectivity.isOffline) {
 
 ## Testing
 
+### Unit and BLoC Tests
+
 ```bash
-# Run all tests
+# Run all unit and widget tests
 flutter test
 
-# Run with coverage
+# Run with coverage report
 flutter test --coverage
 
-# Run specific test file
+# Run a specific test file
 flutter test test/features/home/presentation/bloc/home_bloc_test.dart
 ```
+
+### Web Testing via Google Chrome
+
+```bash
+# Run web unit tests in Chrome
+flutter test --platform chrome
+
+# Run integration tests against headless Chrome
+chromedriver --port=4444 &
+flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart -d chrome
+
+# Launch app in Chrome with debugging
+flutter run -d chrome
+```
+*See [.claude/skills/flutter-test-chrome/SKILL.md](.claude/skills/flutter-test-chrome/SKILL.md) and `/test-chrome` for full web automation details.*
+
+### Mobile Simulator Testing (iOS & Android)
+
+```bash
+# List available simulators and devices
+flutter devices
+flutter emulators
+
+# Launch an iOS Simulator
+open -a Simulator
+# or: xcrun simctl boot <device-udid>
+
+# Launch an Android Emulator
+flutter emulators --launch <emulator-id>
+
+# Run integration tests on the active simulator
+flutter test integration_test/app_test.dart -d <device-id>
+```
+*See [.claude/skills/flutter-test-mobile-simulator/SKILL.md](.claude/skills/flutter-test-mobile-simulator/SKILL.md) and `/test-simulator` for deep-linking, screenshot capture, and ADB/simctl automation.*
 
 ## Production Checklist
 
 - [ ] Update package name in `pubspec.yaml`
-- [ ] Configure `API_BASE_URL`
+- [ ] Configure `API_BASE_URL` in `lib/core/network/dio_client.dart`
 - [ ] Set up Sentry (`SENTRY_DSN`)
-- [ ] Configure app icons
-- [ ] Set up splash screen
-- [ ] Configure Firebase (if needed)
-- [ ] Set up CI/CD
-- [ ] Update Android minSdk to 23 (for flutter_secure_storage)
+- [ ] Configure app icons and splash screen
+- [ ] Configure Firebase or backend services (if needed)
+- [ ] Set up CI/CD workflows (`.github/workflows/`)
+- [x] Android minSdk set to 23 (configured in `android/app/build.gradle.kts`)
 
 ## Running
 

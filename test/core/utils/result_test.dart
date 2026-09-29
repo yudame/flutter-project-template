@@ -126,5 +126,27 @@ void main() {
         expect(called, isTrue);
       });
     });
+
+    group('Dart 3 pattern matching', () {
+      test('matches Success in switch statement', () {
+        const Result<int> result = Success(42);
+        final value = switch (result) {
+          Success(:final data) => data,
+          Failure() => -1,
+          Loading() => 0,
+        };
+        expect(value, equals(42));
+      });
+
+      test('matches Failure in switch statement', () {
+        const Result<int> result = Failure('error');
+        final value = switch (result) {
+          Success() => 1,
+          Failure(:final message) => message,
+          Loading() => 'loading',
+        };
+        expect(value, equals('error'));
+      });
+    });
   });
 }

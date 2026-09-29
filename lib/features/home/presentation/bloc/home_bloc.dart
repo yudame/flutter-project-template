@@ -1,5 +1,6 @@
+import 'package:collection/collection.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:meta/meta.dart';
 
 import '../../../../core/connectivity/connectivity_bloc.dart';
 import '../../../../core/connectivity/connectivity_state.dart';
@@ -10,7 +11,6 @@ import '../../data/repositories/item_repository.dart';
 
 part 'home_event.dart';
 part 'home_state.dart';
-part 'home_bloc.freezed.dart';
 
 class HomeBloc extends Bloc<HomeEvent, HomeState>
     with ConnectivityAwareBlocMixin {
@@ -27,15 +27,20 @@ class HomeBloc extends Bloc<HomeEvent, HomeState>
     initConnectivityListener();
 
     on<HomeEvent>((event, emit) async {
-      await event.when(
-        load: () => _onLoad(emit),
-        refresh: () => _onRefresh(emit),
-        createItem: (title, description) =>
-            _onCreateItem(title, description, emit),
-        updateItem: (item) => _onUpdateItem(item, emit),
-        deleteItem: (id) => _onDeleteItem(id, emit),
-        processQueue: () => _onProcessQueue(emit),
-      );
+      switch (event) {
+        case HomeLoad():
+          await _onLoad(emit);
+        case HomeRefresh():
+          await _onRefresh(emit);
+        case HomeCreateItem(:final title, :final description):
+          await _onCreateItem(title, description, emit);
+        case HomeUpdateItem(:final item):
+          await _onUpdateItem(item, emit);
+        case HomeDeleteItem(:final id):
+          await _onDeleteItem(id, emit);
+        case HomeProcessQueue():
+          await _onProcessQueue(emit);
+      }
     });
   }
 
@@ -52,31 +57,36 @@ class HomeBloc extends Bloc<HomeEvent, HomeState>
 
     final result = await _repository.getItems();
 
-    result.when(
-      success: (items) => emit(HomeState.loaded(items)),
-      failure: (message, _) => emit(HomeState.error(message)),
-      loading: () => emit(const HomeState.loading()),
-    );
+    switch (result) {
+      case Success(:final data):
+        emit(HomeState.loaded(data));
+      case Failure(:final message):
+        emit(HomeState.error(message));
+      case Loading():
+        emit(const HomeState.loading());
+    }
   }
 
   Future<void> _onRefresh(Emitter<HomeState> emit) async {
-    // Keep showing current items while refreshing
-    final currentItems = state.whenOrNull(loaded: (items) => items);
+    final currentItems = switch (state) {
+      HomeLoaded(:final items) => items,
+      _ => null,
+    };
 
     final result = await _repository.getItems();
 
-    result.when(
-      success: (items) => emit(HomeState.loaded(items)),
-      failure: (message, _) {
-        // If we have cached items, keep showing them
+    switch (result) {
+      case Success(:final data):
+        emit(HomeState.loaded(data));
+      case Failure(:final message):
         if (currentItems != null && currentItems.isNotEmpty) {
           emit(HomeState.loaded(currentItems));
         } else {
           emit(HomeState.error(message));
         }
-      },
-      loading: () {},
-    );
+      case Loading():
+        break;
+    }
   }
 
   Future<void> _onCreateItem(
@@ -89,16 +99,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState>
       description: description,
     );
 
-    result.when(
-      success: (item) {
-        final currentItems =
-            state.whenOrNull(loaded: (items) => items) ?? <Item>[];
-        emit(HomeState.loaded([...currentItems, item]));
-      },
-      failure: (message, _) {
-        // Item was queued, optimistically add it
-        final currentItems =
-            state.whenOrNull(loaded: (items) => items) ?? <Item>[];
+    final currentItems = switch (state) {
+      HomeLoaded(:final items) => items,
+      _ => <Item>[],
+    };
+
+    switch (result) {
+      case Success(:final data):
+        emit(HomeState.loaded([...currentItems, data]));
+      case Failure():
         final optimisticItem = Item(
           id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
           title: title,
@@ -106,25 +115,28 @@ class HomeBloc extends Bloc<HomeEvent, HomeState>
           createdAt: DateTime.now(),
         );
         emit(HomeState.loaded([...currentItems, optimisticItem]));
-      },
-      loading: () {},
-    );
+      case Loading():
+        break;
+    }
   }
 
   Future<void> _onUpdateItem(Item item, Emitter<HomeState> emit) async {
-    // Optimistically update
-    final currentItems = state.whenOrNull(loaded: (items) => items) ?? <Item>[];
-    final updatedItems = currentItems.map((i) {
-      return i.id == item.id ? item : i;
-    }).toList();
+    final currentItems = switch (state) {
+      HomeLoaded(:final items) => items,
+      _ => <Item>[],
+    };
+    final updatedItems =
+        currentItems.map((i) => i.id == item.id ? item : i).toList();
     emit(HomeState.loaded(updatedItems));
 
     await _repository.updateItem(item);
   }
 
   Future<void> _onDeleteItem(String id, Emitter<HomeState> emit) async {
-    // Optimistically delete
-    final currentItems = state.whenOrNull(loaded: (items) => items) ?? <Item>[];
+    final currentItems = switch (state) {
+      HomeLoaded(:final items) => items,
+      _ => <Item>[],
+    };
     final updatedItems = currentItems.where((i) => i.id != id).toList();
     emit(HomeState.loaded(updatedItems));
 

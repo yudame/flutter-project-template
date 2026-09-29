@@ -18,5 +18,7 @@
   "emptyListSubtitle": "Agrega tu primer elemento para comenzar",
   "connectionOnline": "Conectado",
   "connectionOffline": "Sin conexión",
-  "connectionPoor": "Conexión lenta"
+  "connectionPoor": "Conexión lenta",
+  "connectionPoorSubtitle": "Algunas funciones pueden ser lentas",
+  "connectionOfflineSubtitle": "Los cambios se sincronizarán al conectarse"
 }

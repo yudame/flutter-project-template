@@ -2,6 +2,7 @@ import 'package:logger/logger.dart';
 
 import '../../../../core/connectivity/connectivity_service.dart';
 import '../../../../core/connectivity/connectivity_state.dart';
+import '../../../../core/database/local_cache_service.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/network/offline_queue.dart';
 import '../../../../core/network/queued_request.dart';
@@ -12,20 +13,21 @@ class ItemRepository {
   final DioClient _dioClient;
   final ConnectivityService _connectivity;
   final OfflineQueue _offlineQueue;
+  final LocalCacheService _localCache;
   final Logger _logger;
 
-  // In-memory cache for demo purposes
-  // In production, use Hive or another local database
-  final Map<String, Item> _cache = {};
+  static const _collection = 'items';
 
   ItemRepository({
     required DioClient dioClient,
     required ConnectivityService connectivity,
     required OfflineQueue offlineQueue,
+    required LocalCacheService localCache,
     required Logger logger,
   })  : _dioClient = dioClient,
         _connectivity = connectivity,
         _offlineQueue = offlineQueue,
+        _localCache = localCache,
         _logger = logger;
 
   Future<Result<List<Item>>> getItems() async {
@@ -47,15 +49,20 @@ class ItemRepository {
           .map((json) => Item.fromJson(json as Map<String, dynamic>))
           .toList();
 
-      // Update cache
-      for (final item in items) {
-        _cache[item.id] = item;
-      }
+      // Persist to local cache
+      await _localCache.putAll(
+        _collection,
+        {for (final item in items) item.id: item.toJson()},
+      );
 
-      _logger.i('Fetched ${items.length} items from API');
+      _logger.i('Fetched and cached ${items.length} items from API');
       return Result.success(items);
     } catch (e) {
-      _logger.e('Failed to fetch items: $e');
+      _logger.e('Failed to fetch items from API: $e, checking cache');
+      final cached = await _fetchFromCache();
+      if (cached.isSuccess) {
+        return cached;
+      }
       return Result.failure('Failed to fetch items', e);
     }
   }
@@ -69,10 +76,10 @@ class ItemRepository {
           .map((json) => Item.fromJson(json as Map<String, dynamic>))
           .toList();
 
-      // Update cache
-      for (final item in items) {
-        _cache[item.id] = item;
-      }
+      await _localCache.putAll(
+        _collection,
+        {for (final item in items) item.id: item.toJson()},
+      );
 
       return Result.success(items);
     } catch (e) {
@@ -81,37 +88,49 @@ class ItemRepository {
     }
   }
 
-  Future<Result<List<Item>>> _fetchFromCache() {
-    if (_cache.isEmpty) {
-      return Future.value(const Result.failure('No cached data available'));
-    }
-    return Future.value(Result.success(_cache.values.toList()));
+  Future<Result<List<Item>>> _fetchFromCache() async {
+    final result = await _localCache.getAll(_collection);
+    return switch (result) {
+      Success(:final data) when data.isNotEmpty => Result.success(
+          data.map((json) => Item.fromJson(json)).toList(),
+        ),
+      Success() => const Result.failure('No cached data available'),
+      Failure(:final message, :final error) => Result.failure(message, error),
+      Loading() => const Result.loading(),
+    };
   }
 
   Future<Result<Item>> getItem(String id) async {
     final state = _connectivity.currentState;
 
     if (state is ConnectivityOffline) {
-      final cached = _cache[id];
-      if (cached != null) {
-        return Result.success(cached);
-      }
-      return const Result.failure('Item not found in cache');
+      return _getCachedItem(id);
     }
 
     try {
       final response = await _dioClient.get<Map<String, dynamic>>('/items/$id');
       final item = Item.fromJson(response.data!);
-      _cache[item.id] = item;
+      await _localCache.put(_collection, item.id, item.toJson());
       return Result.success(item);
     } catch (e) {
       // Try cache on failure
-      final cached = _cache[id];
-      if (cached != null) {
-        return Result.success(cached);
+      final cached = await _getCachedItem(id);
+      if (cached.isSuccess) {
+        return cached;
       }
       return Result.failure('Failed to fetch item', e);
     }
+  }
+
+  Future<Result<Item>> _getCachedItem(String id) async {
+    final result = await _localCache.get(_collection, id);
+    return switch (result) {
+      Success(:final data) when data != null =>
+        Result.success(Item.fromJson(data)),
+      Success() => const Result.failure('Item not found in cache'),
+      Failure(:final message, :final error) => Result.failure(message, error),
+      Loading() => const Result.loading(),
+    };
   }
 
   Future<Result<Item>> createItem({
@@ -126,14 +145,18 @@ class ItemRepository {
 
     if (_connectivity.isOffline) {
       await _offlineQueue.add(RequestType.createItem, params);
-      // Create optimistic local item
+      // Create optimistic local item and persist to cache
       final optimisticItem = Item(
         id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
         title: title,
         description: description,
         createdAt: DateTime.now(),
       );
-      _cache[optimisticItem.id] = optimisticItem;
+      await _localCache.put(
+        _collection,
+        optimisticItem.id,
+        optimisticItem.toJson(),
+      );
       return Result.success(optimisticItem);
     }
 
@@ -143,11 +166,22 @@ class ItemRepository {
         data: params,
       );
       final item = Item.fromJson(response.data!);
-      _cache[item.id] = item;
+      await _localCache.put(_collection, item.id, item.toJson());
       return Result.success(item);
     } catch (e) {
       // Queue for later if failed
       await _offlineQueue.add(RequestType.createItem, params);
+      final optimisticItem = Item(
+        id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+        title: title,
+        description: description,
+        createdAt: DateTime.now(),
+      );
+      await _localCache.put(
+        _collection,
+        optimisticItem.id,
+        optimisticItem.toJson(),
+      );
       return Result.failure('Failed to create item, queued for later', e);
     }
   }
@@ -157,7 +191,7 @@ class ItemRepository {
 
     if (_connectivity.isOffline) {
       await _offlineQueue.add(RequestType.updateItem, params);
-      _cache[item.id] = item;
+      await _localCache.put(_collection, item.id, item.toJson());
       return Result.success(item);
     }
 
@@ -167,11 +201,11 @@ class ItemRepository {
         data: params,
       );
       final updatedItem = Item.fromJson(response.data!);
-      _cache[updatedItem.id] = updatedItem;
+      await _localCache.put(_collection, updatedItem.id, updatedItem.toJson());
       return Result.success(updatedItem);
     } catch (e) {
       await _offlineQueue.add(RequestType.updateItem, params);
-      _cache[item.id] = item;
+      await _localCache.put(_collection, item.id, item.toJson());
       return Result.failure('Failed to update item, queued for later', e);
     }
   }
@@ -181,17 +215,17 @@ class ItemRepository {
 
     if (_connectivity.isOffline) {
       await _offlineQueue.add(RequestType.deleteItem, params);
-      _cache.remove(id);
+      await _localCache.remove(_collection, id);
       return const Result.success(null);
     }
 
     try {
       await _dioClient.delete('/items/$id');
-      _cache.remove(id);
+      await _localCache.remove(_collection, id);
       return const Result.success(null);
     } catch (e) {
       await _offlineQueue.add(RequestType.deleteItem, params);
-      _cache.remove(id);
+      await _localCache.remove(_collection, id);
       return Result.failure('Failed to delete item, queued for later', e);
     }
   }

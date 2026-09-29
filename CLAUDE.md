@@ -4,23 +4,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a **documentation-only Flutter architecture template** for small teams (2-5 people) using AI-assisted development. It contains no source code—only architecture guides and setup documentation to copy into new Flutter projects.
+This is a **production-ready Flutter architecture template** for small teams (2-5 people) using AI-assisted development. It contains a complete, working implementation in `lib/` (BLoC, offline queue, connectivity monitoring, Dio client, local cache) and architecture guides in `docs/`.
 
 ## Key Files
 
-- `docs/architecture.md` - Reference guidelines + **planned features** (Database Layer)
-- `docs/implemented.md` - Documentation for already-built features (connectivity, network, offline queue, BLoC patterns)
+- `docs/architecture.md` - Reference guidelines and architecture patterns
+- `docs/implemented.md` - Documentation for built features (connectivity, network, offline queue, BLoC patterns)
 - `docs/setup_reference.md` - Environment setup and critical implementation patterns
 
 ## Architecture Principles
 
 When implementing features based on this template:
 
-1. **Two-layer architecture** - Presentation + Data only (no separate domain layer)
-2. **Freezed everywhere** - Models, BLoC events, and states use sealed unions
+1. **Two-layer architecture** - Presentation + Data only (no premature domain layer)
+2. **Dart 3 sealed classes for BLoC** - Events and states use native Dart 3 `sealed class` hierarchies for instant compilation and pattern matching; Freezed is reserved for complex data models
 3. **Connectivity-first** - Explicit handling of online/poor/offline states in repositories
 4. **BLoC pattern** - State management with flutter_bloc + hydrated_bloc
 5. **get_it** - Service locator for dependency injection
+6. **Local cache persistence** - Repositories persist data through `LocalCacheService`
 
 ## Project Structure (When Implemented)
 
@@ -28,20 +29,20 @@ When implementing features based on this template:
 lib/
 ├── core/
 │   ├── theme/              # App theme
-│   ├── routes/             # go_router setup
-│   ├── network/            # DioClient, offline queue
-│   ├── database/           # DatabaseService, StorageService (Firebase/Supabase)
+│   ├── routes/             # go_router setup & auth guard
+│   ├── network/            # DioClient, auth interceptor, offline queue
+│   ├── database/           # LocalCacheService & DatabaseService interface
 │   ├── connectivity/       # ConnectivityBloc & service
 │   ├── di/                 # get_it configuration
-│   └── utils/              # Logger, constants, extensions
+│   └── utils/              # Result sealed class, mixins
 ├── features/
 │   └── [feature_name]/
 │       ├── data/
-│       │   ├── models/     # Freezed models
+│       │   ├── models/     # Freezed data models
 │       │   ├── repositories/
 │       │   └── datasources/
 │       └── presentation/
-│           ├── bloc/       # BLoC + Freezed events/states
+│           ├── bloc/       # BLoC + Dart 3 sealed events/states
 │           ├── pages/
 │           └── widgets/
 └── shared/
@@ -58,16 +59,26 @@ flutter run -d android
 flutter test
 flutter test test/path/to/specific_test.dart
 
-# Code generation (freezed, json_serializable, hive)
-flutter pub run build_runner build --delete-conflicting-outputs
-flutter pub run build_runner watch --delete-conflicting-outputs
+# Code generation (freezed, json_serializable)
+dart run build_runner build --delete-conflicting-outputs
+dart run build_runner watch --delete-conflicting-outputs
 
 # Clean and rebuild
 flutter clean && flutter pub get
 
-# Format code (use instead of linting)
+# Format code
 dart format .
 ```
+
+## Claude Skills & Commands
+
+Skills are available in `.claude/skills/` and interactive commands in `.claude/commands/`:
+
+- **`/test-chrome`** (`.claude/skills/flutter-test-chrome`): Run and test web app on Chrome with hot reload, ChromeDriver integration tests, or browser automation.
+- **`/test-simulator`** (`.claude/skills/flutter-test-mobile-simulator`): Discover, boot, and run tests on iOS Simulators and Android Virtual Devices with screenshot verification.
+- **`/new-bloc`**: Scaffold modern BLoC with Dart 3 sealed events and states.
+- **`/new-feature`**: Scaffold complete feature module (model, repo, BLoC, page, tests).
+- **`/run-tests`**: Execute unit, widget, and integration tests across web and mobile.
 
 ## Key Patterns
 

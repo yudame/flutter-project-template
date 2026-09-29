@@ -2,13 +2,15 @@ Run tests and report results.
 
 ## Options
 
-1. **All tests**: Run the complete test suite
+1. **All unit & widget tests**: Run the standard test suite
 2. **Specific file**: Run tests for one file
 3. **With coverage**: Include coverage report
+4. **Chrome E2E**: Run web integration tests (`/test-chrome --e2e`)
+5. **Mobile Simulator E2E**: Run mobile integration tests (`/test-simulator ios --e2e` or `android`)
 
 ## Process
 
-### Run All Tests
+### Run All Unit & Widget Tests
 ```bash
 flutter test
 ```
@@ -21,6 +23,17 @@ flutter test test/path/to/file_test.dart
 ### Run With Coverage
 ```bash
 flutter test --coverage
+```
+
+### Run Integration Tests (Mobile Simulator)
+```bash
+flutter test integration_test/ -d ios
+# or: flutter test integration_test/ -d android
+```
+
+### Run Integration Tests (Chrome)
+```bash
+flutter drive --driver=test_driver/integration_test.dart --target=integration_test/web_smoke_test.dart -d chrome
 ```
 
 ## Report Format

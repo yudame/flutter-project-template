@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# Gradle start up script for POSIX systems
+APP_HOME=$(cd "$(dirname "$0")" && pwd -P)
+exec "$APP_HOME/gradle/wrapper/gradlew" "$@"

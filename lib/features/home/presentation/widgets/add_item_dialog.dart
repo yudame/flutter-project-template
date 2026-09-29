@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
+
 class AddItemDialog extends StatefulWidget {
   final void Function(String title, String? description) onAdd;
 
@@ -26,8 +28,10 @@ class _AddItemDialogState extends State<AddItemDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations);
+
     return AlertDialog(
-      title: const Text('Add Item'),
+      title: Text(l10n?.buttonAdd != null ? '${l10n!.buttonAdd} Item' : 'Add Item'),
       content: Form(
         key: _formKey,
         child: Column(
@@ -64,11 +68,11 @@ class _AddItemDialogState extends State<AddItemDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(l10n?.buttonCancel ?? 'Cancel'),
         ),
         FilledButton(
           onPressed: _submit,
-          child: const Text('Add'),
+          child: Text(l10n?.buttonAdd ?? 'Add'),
         ),
       ],
     );

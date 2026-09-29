@@ -11,6 +11,7 @@ final appRouter = GoRouter(
   initialLocation: '/',
   debugLogDiagnostics: true,
   // Auth guard (uncomment when using authentication):
+  // refreshListenable: GoRouterRefreshStream(getIt<AuthBloc>().stream),
   // redirect: authGuard(
   //   authBloc: getIt<AuthBloc>(),
   //   loginPath: '/login',

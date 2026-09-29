@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:dio/dio.dart';
 import 'package:hive/hive.dart';
 import 'package:logger/logger.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -35,18 +36,29 @@ class OfflineQueue {
         _executor = executor,
         _logger = logger;
 
+  Future<Box<String>> _getBox() async {
+    if (_hive.isBoxOpen(_boxName)) {
+      return _hive.box<String>(_boxName);
+    }
+    return _hive.openBox<String>(_boxName);
+  }
+
   Future<void> add(RequestType type, Map<String, dynamic> params) async {
     // Generate or extract idempotency key
     final idempotencyKey = params['idempotency_key'] as String? ??
         '${type.name}_${params.hashCode}_${DateTime.now().millisecondsSinceEpoch}';
     params['idempotency_key'] = idempotencyKey;
 
-    final box = await _hive.openBox<String>(_boxName);
+    final box = await _getBox();
 
     // Check for existing request with same idempotency key
     final existing = box.values.any((jsonStr) {
-      final r = QueuedRequest.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
-      return r.type == type && r.params['idempotency_key'] == idempotencyKey;
+      try {
+        final r = QueuedRequest.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
+        return r.type == type && r.params['idempotency_key'] == idempotencyKey;
+      } catch (_) {
+        return false;
+      }
     });
 
     if (existing) {
@@ -72,83 +84,97 @@ class OfflineQueue {
   }
 
   Future<void> processQueue() async {
-    final box = await _hive.openBox<String>(_boxName);
+    final box = await _getBox();
     final requests = box.values
-        .map((jsonStr) => QueuedRequest.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>))
+        .map((jsonStr) {
+          try {
+            return QueuedRequest.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<QueuedRequest>()
         .toList()
       ..sort((a, b) => a.queuedAt.compareTo(b.queuedAt));
+
+    if (requests.isEmpty) return;
 
     _logger.i('Processing ${requests.length} queued requests');
 
     for (final request in requests) {
       try {
-        await _executeWithRetry(request);
+        await _executor.execute(request);
         await box.delete(request.id);
         _logger.i('Processed ${request.type.name}: ${request.id}');
       } on AuthException {
         _logger.e('Auth failed, stopping queue processing');
         break;
       } catch (e, stack) {
-        await _handleFailedRequest(request, box, e, stack);
+        final shouldStopQueue = await _handleFailedRequest(request, box, e, stack);
+        if (shouldStopQueue) {
+          _logger.w('Stopping queue processing due to network error');
+          break;
+        }
       }
     }
   }
 
-  Future<void> _executeWithRetry(QueuedRequest request) async {
-    for (int attempt = 0; attempt <= _maxRetries; attempt++) {
-      try {
-        await _executor.execute(request);
-        return;
-      } catch (e) {
-        if (attempt == _maxRetries) rethrow;
-
-        final backoff = _getBackoffDelay(attempt);
-        _logger.d('Retry attempt ${attempt + 1} after ${backoff.inSeconds}s');
-        await Future.delayed(backoff);
-      }
-    }
-  }
-
-  Duration _getBackoffDelay(int retryCount) {
-    // Exponential: 1s, 2s, 4s, 8s, max 30s
-    final seconds = min(pow(2, retryCount).toInt(), 30);
-    // Add jitter to avoid thundering herd
-    final jitter = Random().nextInt(1000);
-    return Duration(seconds: seconds, milliseconds: jitter);
-  }
-
-  Future<void> _handleFailedRequest(
+  /// Handles failure for a single queued request.
+  /// Returns `true` if processing the remainder of the queue should be aborted (e.g. network down).
+  Future<bool> _handleFailedRequest(
     QueuedRequest request,
     Box<String> box,
     dynamic error,
     StackTrace stack,
   ) async {
-    if (request.retryCount >= _maxRetries) {
-      _logger.e('Max retries exceeded for ${request.id}, removing from queue');
+    // Check if error is a permanent client error (4xx except 408 timeout or 429 rate limit)
+    final isPermanentClientError = error is DioException &&
+        error.response?.statusCode != null &&
+        error.response!.statusCode! >= 400 &&
+        error.response!.statusCode! < 500 &&
+        error.response!.statusCode! != 408 &&
+        error.response!.statusCode! != 429;
+
+    if (isPermanentClientError || request.retryCount >= _maxRetries) {
+      _logger.e(
+        'Dropping request ${request.id} (permanent error or max retries exceeded): $error',
+      );
       await Sentry.captureException(
         error,
         stackTrace: stack,
         hint: Hint.withMap({'request_params': request.params}),
       );
       await box.delete(request.id);
-    } else {
-      final updated = request.copyWith(
-        retryCount: request.retryCount + 1,
-      );
-      await box.put(request.id, jsonEncode(updated.toJson()));
-      _logger.w(
-        'Request ${request.id} failed, retry count: ${updated.retryCount}',
-      );
+      return false; // Not a general network outage, proceed with next item
     }
+
+    // Transient failure: increment retry count
+    final updated = request.copyWith(
+      retryCount: request.retryCount + 1,
+    );
+    await box.put(request.id, jsonEncode(updated.toJson()));
+    _logger.w('Request ${request.id} failed, retry count: ${updated.retryCount}');
+
+    // If it's a network connection drop, pause queue processing for this cycle
+    final isConnectionError = error is DioException &&
+        (error.type == DioExceptionType.connectionError ||
+            error.type == DioExceptionType.connectionTimeout);
+    return isConnectionError;
+  }
+
+  Duration getBackoffDelay(int retryCount) {
+    final seconds = min(pow(2, retryCount).toInt(), 30);
+    final jitter = Random().nextInt(1000);
+    return Duration(seconds: seconds, milliseconds: jitter);
   }
 
   Future<int> get queueLength async {
-    final box = await _hive.openBox<String>(_boxName);
+    final box = await _getBox();
     return box.length;
   }
 
   Future<void> clearQueue() async {
-    final box = await _hive.openBox<String>(_boxName);
+    final box = await _getBox();
     await box.clear();
     _logger.i('Queue cleared');
   }

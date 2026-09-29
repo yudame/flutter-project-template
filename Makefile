@@ -36,13 +36,13 @@ analyze: ## Run static analysis
 	flutter analyze
 
 format: ## Format code
-	dart format lib/ test/
+	dart format .
 
 gen: ## Run code generation (freezed, json_serializable, hive)
-	flutter pub run build_runner build --delete-conflicting-outputs
+	dart run build_runner build --delete-conflicting-outputs
 
 watch: ## Run code generation in watch mode
-	flutter pub run build_runner watch --delete-conflicting-outputs
+	dart run build_runner watch --delete-conflicting-outputs
 
 run: ## Run the app in debug mode
 	flutter run

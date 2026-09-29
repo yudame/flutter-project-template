@@ -9,6 +9,7 @@ import 'connectivity_state.dart';
 class ConnectivityBloc extends Bloc<ConnectivityEvent, ConnectivityState> {
   final Connectivity _connectivity;
   final Dio _dio;
+  final String _healthEndpoint;
   Timer? _pingTimer;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
@@ -22,8 +23,10 @@ class ConnectivityBloc extends Bloc<ConnectivityEvent, ConnectivityState> {
   ConnectivityBloc({
     required Connectivity connectivity,
     required Dio dio,
+    String healthEndpoint = '/health',
   })  : _connectivity = connectivity,
         _dio = dio,
+        _healthEndpoint = healthEndpoint,
         super(const ConnectivityState.offline()) {
     on<ConnectivityEvent>(_onEvent);
     _initConnectivityListener();
@@ -56,15 +59,17 @@ class ConnectivityBloc extends Bloc<ConnectivityEvent, ConnectivityState> {
     ConnectivityEvent event,
     Emitter<ConnectivityState> emit,
   ) async {
-    await event.when(
-      connected: () async => _onConnected(emit),
-      disconnected: () async {
+    switch (event) {
+      case ConnectivityConnected():
+        await _onConnected(emit);
+      case ConnectivityDisconnected():
         _stopLatencyMonitoring();
         emit(const ConnectivityState.offline());
-      },
-      stable: () async => emit(const ConnectivityState.online()),
-      degraded: () async => emit(const ConnectivityState.poor()),
-    );
+      case ConnectivityStable():
+        emit(const ConnectivityState.online());
+      case ConnectivityDegraded():
+        emit(const ConnectivityState.poor());
+    }
   }
 
   Future<void> _onConnected(Emitter<ConnectivityState> emit) async {
@@ -83,15 +88,30 @@ class ConnectivityBloc extends Bloc<ConnectivityEvent, ConnectivityState> {
     _pingTimer = null;
   }
 
+  /// Pauses latency polling when the application is backgrounded.
+  void pauseMonitoring() {
+    _stopLatencyMonitoring();
+  }
+
+  /// Resumes latency polling when the application is resumed.
+  void resumeMonitoring() {
+    if (state is! ConnectivityOffline) {
+      _startLatencyMonitoring();
+      _checkLatency();
+    }
+  }
+
   Future<void> _checkLatency() async {
     final stopwatch = Stopwatch()..start();
 
     try {
       await _dio.head(
-        '/health',
+        _healthEndpoint,
         options: Options(
           receiveTimeout: const Duration(seconds: 5),
           sendTimeout: const Duration(seconds: 5),
+          // Any reachable response under 500 confirms network connectivity to the server
+          validateStatus: (status) => status != null && status < 500,
         ),
       );
 
@@ -114,7 +134,7 @@ class ConnectivityBloc extends Bloc<ConnectivityEvent, ConnectivityState> {
 
   @override
   Future<void> close() {
-    _pingTimer?.cancel();
+    _stopLatencyMonitoring();
     _connectivitySubscription?.cancel();
     return super.close();
   }

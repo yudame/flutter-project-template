@@ -1,4 +1,4 @@
-Create a new BLoC with Freezed events and states.
+Create a new BLoC with Dart 3 sealed events and states.
 
 ## Input Required
 
@@ -16,7 +16,7 @@ Creates three files in `lib/features/{feature}/presentation/bloc/`:
 
 ```dart
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:meta/meta.dart';
 
 import '../../../../core/connectivity/connectivity_bloc.dart';
 import '../../../../core/connectivity/connectivity_state.dart';
@@ -26,7 +26,6 @@ import '../../../../core/utils/result.dart';
 
 part '{name}_event.dart';
 part '{name}_state.dart';
-part '{name}_bloc.freezed.dart';
 
 class {Name}Bloc extends Bloc<{Name}Event, {Name}State>
     with ConnectivityAwareBlocMixin {
@@ -44,10 +43,13 @@ class {Name}Bloc extends Bloc<{Name}Event, {Name}State>
     initConnectivityListener();
 
     on<{Name}Event>((event, emit) async {
-      await event.when(
-        load: () => _onLoad(emit),
+      switch (event) {
+        case {Name}Load():
+          await _onLoad(emit);
+        case {Name}Refresh():
+          await _onRefresh(emit);
         // Add other event handlers
-      );
+      }
     });
   }
 
@@ -61,15 +63,21 @@ class {Name}Bloc extends Bloc<{Name}Event, {Name}State>
   Future<void> _onLoad(Emitter<{Name}State> emit) async {
     emit(const {Name}State.loading());
 
-    // TODO: Implement data loading
     // final result = await _repository.getItems();
-    // result.when(
-    //   success: (data) => emit({Name}State.loaded(data)),
-    //   failure: (message, _) => emit({Name}State.error(message)),
-    //   loading: () {},
-    // );
+    // switch (result) {
+    //   case Success(:final data):
+    //     emit({Name}State.loaded(data));
+    //   case Failure(:final message):
+    //     emit({Name}State.error(message));
+    //   case Loading():
+    //     break;
+    // }
 
     emit(const {Name}State.loaded()); // Placeholder
+  }
+
+  Future<void> _onRefresh(Emitter<{Name}State> emit) async {
+    // Implement refresh
   }
 }
 ```
@@ -79,11 +87,32 @@ class {Name}Bloc extends Bloc<{Name}Event, {Name}State>
 ```dart
 part of '{name}_bloc.dart';
 
-@freezed
-class {Name}Event with _${Name}Event {
-  const factory {Name}Event.load() = _Load;
-  const factory {Name}Event.refresh() = _Refresh;
-  // Add custom events as specified
+@immutable
+sealed class {Name}Event {
+  const {Name}Event();
+
+  const factory {Name}Event.load() = {Name}Load;
+  const factory {Name}Event.refresh() = {Name}Refresh;
+}
+
+final class {Name}Load extends {Name}Event {
+  const {Name}Load();
+
+  @override
+  bool operator ==(Object other) => identical(this, other) || other is {Name}Load;
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+}
+
+final class {Name}Refresh extends {Name}Event {
+  const {Name}Refresh();
+
+  @override
+  bool operator ==(Object other) => identical(this, other) || other is {Name}Refresh;
+
+  @override
+  int get hashCode => runtimeType.hashCode;
 }
 ```
 
@@ -92,31 +121,58 @@ class {Name}Event with _${Name}Event {
 ```dart
 part of '{name}_bloc.dart';
 
-@freezed
-class {Name}State with _${Name}State {
-  const factory {Name}State.initial() = _Initial;
-  const factory {Name}State.loading() = _Loading;
-  const factory {Name}State.loaded(/* Add data parameter if needed */) = _Loaded;
-  const factory {Name}State.error(String message) = _Error;
+@immutable
+sealed class {Name}State {
+  const {Name}State();
+
+  const factory {Name}State.initial() = {Name}Initial;
+  const factory {Name}State.loading() = {Name}Loading;
+  const factory {Name}State.loaded() = {Name}Loaded;
+  const factory {Name}State.error(String message) = {Name}Error;
 }
-```
 
-## Common Event Patterns
+final class {Name}Initial extends {Name}State {
+  const {Name}Initial();
 
-For CRUD operations:
-```dart
-const factory {Name}Event.load() = _Load;
-const factory {Name}Event.refresh() = _Refresh;
-const factory {Name}Event.create{Item}({required String title}) = _Create{Item};
-const factory {Name}Event.update{Item}({required {Item} item}) = _Update{Item};
-const factory {Name}Event.delete{Item}(String id) = _Delete{Item};
-```
+  @override
+  bool operator ==(Object other) => identical(this, other) || other is {Name}Initial;
 
-For form handling:
-```dart
-const factory {Name}Event.fieldChanged({required String field, required String value}) = _FieldChanged;
-const factory {Name}Event.submit() = _Submit;
-const factory {Name}Event.reset() = _Reset;
+  @override
+  int get hashCode => runtimeType.hashCode;
+}
+
+final class {Name}Loading extends {Name}State {
+  const {Name}Loading();
+
+  @override
+  bool operator ==(Object other) => identical(this, other) || other is {Name}Loading;
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+}
+
+final class {Name}Loaded extends {Name}State {
+  const {Name}Loaded();
+
+  @override
+  bool operator ==(Object other) => identical(this, other) || other is {Name}Loaded;
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+}
+
+final class {Name}Error extends {Name}State {
+  final String message;
+  const {Name}Error(this.message);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is {Name}Error && runtimeType == other.runtimeType && message == other.message;
+
+  @override
+  int get hashCode => message.hashCode;
+}
 ```
 
 ## After Generation
@@ -131,12 +187,7 @@ const factory {Name}Event.reset() = _Reset;
    );
    ```
 
-2. Run code generation:
-   ```bash
-   flutter pub run build_runner build --delete-conflicting-outputs
-   ```
-
-3. Add `BlocProvider` in widget tree where needed:
+2. Add `BlocProvider` in widget tree where needed:
    ```dart
    BlocProvider(
      create: (_) => getIt<{Name}Bloc>()..add(const {Name}Event.load()),
@@ -144,4 +195,4 @@ const factory {Name}Event.reset() = _Reset;
    )
    ```
 
-4. Create tests in `test/features/{feature}/presentation/bloc/{name}_bloc_test.dart`
+3. Create tests in `test/features/{feature}/presentation/bloc/{name}_bloc_test.dart`

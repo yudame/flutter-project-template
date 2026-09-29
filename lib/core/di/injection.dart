@@ -115,6 +115,7 @@ Future<void> configureDependencies() async {
       dioClient: getIt<DioClient>(),
       connectivity: getIt<ConnectivityService>(),
       offlineQueue: getIt<OfflineQueue>(),
+      localCache: getIt<LocalCacheService>(),
       logger: getIt<Logger>(),
     ),
   );

@@ -1,17 +1,40 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/auth_bloc.dart';
 import '../auth/auth_state.dart';
 
+/// Converts a [Stream] into a [Listenable] for [GoRouter.refreshListenable].
+class GoRouterRefreshStream extends ChangeNotifier {
+  late final StreamSubscription<dynamic> _subscription;
+
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen(
+          (dynamic _) => notifyListeners(),
+        );
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
 /// Creates a redirect function for protecting routes.
 ///
-/// Use with [GoRouter.redirect] to:
+/// Use with [GoRouter.redirect] and [GoRouter.refreshListenable] to:
 /// - Redirect unauthenticated users to login
 /// - Redirect authenticated users away from login page
+/// - Automatically re-evaluate redirects when auth state changes
 ///
 /// Example:
 /// ```dart
 /// final appRouter = GoRouter(
+///   refreshListenable: GoRouterRefreshStream(getIt<AuthBloc>().stream),
 ///   redirect: authGuard(
 ///     authBloc: getIt<AuthBloc>(),
 ///     loginPath: '/login',

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/connectivity/connectivity_bloc.dart';
 import '../../core/connectivity/connectivity_state.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 /// A banner that displays connectivity status to the user.
 ///
@@ -18,6 +19,8 @@ class ConnectivityBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations);
+
     return BlocBuilder<ConnectivityBloc, ConnectivityState>(
       builder: (context, state) {
         return Column(
@@ -25,23 +28,24 @@ class ConnectivityBanner extends StatelessWidget {
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               height: state is ConnectivityOnline ? 0 : null,
-              child: state.when(
-                online: () => const SizedBox.shrink(),
-                poor: () => _buildBanner(
-                  context,
-                  'Poor connection',
-                  'Some features may be slow',
-                  Colors.orange,
-                  Icons.signal_wifi_statusbar_connected_no_internet_4,
-                ),
-                offline: () => _buildBanner(
-                  context,
-                  'No connection',
-                  'Changes will sync when online',
-                  Colors.red,
-                  Icons.wifi_off,
-                ),
-              ),
+              child: switch (state) {
+                ConnectivityOnline() => const SizedBox.shrink(),
+                ConnectivityPoor() => _buildBanner(
+                    context,
+                    l10n?.connectionPoor ?? 'Poor connection',
+                    l10n?.connectionPoorSubtitle ?? 'Some features may be slow',
+                    Colors.orange,
+                    Icons.signal_wifi_statusbar_connected_no_internet_4,
+                  ),
+                ConnectivityOffline() => _buildBanner(
+                    context,
+                    l10n?.connectionOffline ?? 'No connection',
+                    l10n?.connectionOfflineSubtitle ??
+                        'Changes will sync when online',
+                    Colors.red,
+                    Icons.wifi_off,
+                  ),
+              },
             ),
             Expanded(child: child),
           ],

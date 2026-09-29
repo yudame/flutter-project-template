@@ -87,5 +87,13 @@
   "connectionPoor": "Poor connection",
   "@connectionPoor": {
     "description": "Status shown when connection is slow"
+  },
+  "connectionPoorSubtitle": "Some features may be slow",
+  "@connectionPoorSubtitle": {
+    "description": "Subtitle shown when connection is slow"
+  },
+  "connectionOfflineSubtitle": "Changes will sync when online",
+  "@connectionOfflineSubtitle": {
+    "description": "Subtitle shown when device is offline"
   }
 }

@@ -1,15 +1,19 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 
 import 'auth_exception.dart';
 import 'auth_token_manager.dart';
 
+/// Interceptor that attaches authentication tokens to outbound requests
+/// and handles concurrency-safe token refreshing on expiry or 401 responses.
 class AuthInterceptor extends Interceptor {
   final AuthTokenManager _tokenManager;
   final Dio _dio;
   final Logger _logger;
 
-  bool _isRefreshing = false;
+  Completer<String?>? _refreshCompleter;
 
   AuthInterceptor({
     required AuthTokenManager tokenManager,
@@ -29,16 +33,15 @@ class AuthInterceptor extends Interceptor {
       return handler.next(options);
     }
 
-    // Check if token needs refresh
-    if (await _tokenManager.isTokenExpired() && !_isRefreshing) {
-      _isRefreshing = true;
+    // If a refresh is already in flight, await the new token
+    if (_refreshCompleter != null) {
       try {
-        final newToken = await _tokenManager.refreshAccessToken();
-        options.headers['Authorization'] = 'Bearer $newToken';
-        _isRefreshing = false;
-      } catch (e) {
-        _isRefreshing = false;
-        _logger.e('Token refresh failed: $e');
+        final token = await _refreshCompleter!.future;
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        return handler.next(options);
+      } catch (_) {
         return handler.reject(
           DioException(
             requestOptions: options,
@@ -46,14 +49,37 @@ class AuthInterceptor extends Interceptor {
           ),
         );
       }
+    }
+
+    // Check if token needs proactive refresh
+    if (await _tokenManager.isTokenExpired()) {
+      final completer = Completer<String?>();
+      _refreshCompleter = completer;
+
+      try {
+        final newToken = await _tokenManager.refreshAccessToken();
+        options.headers['Authorization'] = 'Bearer $newToken';
+        completer.complete(newToken);
+        return handler.next(options);
+      } catch (e) {
+        completer.completeError(e);
+        _logger.e('Token refresh failed: $e');
+        return handler.reject(
+          DioException(
+            requestOptions: options,
+            error: const AuthException('Authentication expired'),
+          ),
+        );
+      } finally {
+        _refreshCompleter = null;
+      }
     } else {
       final token = await _tokenManager.getAccessToken();
       if (token != null) {
         options.headers['Authorization'] = 'Bearer $token';
       }
+      return handler.next(options);
     }
-
-    handler.next(options);
   }
 
   @override
@@ -62,23 +88,42 @@ class AuthInterceptor extends Interceptor {
     ErrorInterceptorHandler handler,
   ) async {
     // Handle 401 Unauthorized
-    if (err.response?.statusCode == 401 && !_isRefreshing) {
-      _isRefreshing = true;
+    if (err.response?.statusCode == 401 && !_isAuthEndpoint(err.requestOptions.path)) {
+      // If a refresh is already underway, await it and retry
+      if (_refreshCompleter != null) {
+        try {
+          final token = await _refreshCompleter!.future;
+          if (token != null) {
+            final opts = err.requestOptions;
+            opts.headers['Authorization'] = 'Bearer $token';
+            final response = await _dio.fetch(opts);
+            return handler.resolve(response);
+          }
+        } catch (_) {
+          return handler.next(err);
+        }
+      }
+
+      final completer = Completer<String?>();
+      _refreshCompleter = completer;
 
       try {
         final newToken = await _tokenManager.refreshAccessToken();
+        completer.complete(newToken);
+
         final opts = err.requestOptions;
         opts.headers['Authorization'] = 'Bearer $newToken';
 
-        // Retry the request with new token
+        // Retry the request with the new token
         final response = await _dio.fetch(opts);
-        _isRefreshing = false;
         return handler.resolve(response);
       } catch (e) {
-        _isRefreshing = false;
+        completer.completeError(e);
         _logger.e('Token refresh on 401 failed: $e');
-        // Clear tokens on refresh failure
         await _tokenManager.clearTokens();
+        return handler.next(err);
+      } finally {
+        _refreshCompleter = null;
       }
     }
 

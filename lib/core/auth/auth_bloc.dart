@@ -85,11 +85,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       password: event.password,
     );
 
-    result.when(
-      success: (user) => emit(AuthState.authenticated(user)),
-      failure: (message, _) => emit(AuthState.error(message)),
-      loading: () {}, // Already in loading state
-    );
+    switch (result) {
+      case Success(:final data):
+        emit(AuthState.authenticated(data));
+      case Failure(:final message):
+        emit(AuthState.error(message));
+      case Loading():
+        break;
+    }
   }
 
   Future<void> _onSignUpRequested(
@@ -104,11 +107,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       displayName: event.displayName,
     );
 
-    result.when(
-      success: (user) => emit(AuthState.authenticated(user)),
-      failure: (message, _) => emit(AuthState.error(message)),
-      loading: () {},
-    );
+    switch (result) {
+      case Success(:final data):
+        emit(AuthState.authenticated(data));
+      case Failure(:final message):
+        emit(AuthState.error(message));
+      case Loading():
+        break;
+    }
   }
 
   Future<void> _onOAuthRequested(
@@ -119,11 +125,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     final result = await _authRepository.signInWithOAuth(event.provider);
 
-    result.when(
-      success: (user) => emit(AuthState.authenticated(user)),
-      failure: (message, _) => emit(AuthState.error(message)),
-      loading: () {},
-    );
+    switch (result) {
+      case Success(:final data):
+        emit(AuthState.authenticated(data));
+      case Failure(:final message):
+        emit(AuthState.error(message));
+      case Loading():
+        break;
+    }
   }
 
   Future<void> _onLogoutRequested(
@@ -134,11 +143,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     final result = await _authRepository.signOut();
 
-    result.when(
-      success: (_) => emit(const AuthState.unauthenticated()),
-      failure: (message, _) => emit(AuthState.error(message)),
-      loading: () {},
-    );
+    switch (result) {
+      case Success():
+        emit(const AuthState.unauthenticated());
+      case Failure(:final message):
+        emit(AuthState.error(message));
+      case Loading():
+        break;
+    }
   }
 
   void _onUserChanged(
